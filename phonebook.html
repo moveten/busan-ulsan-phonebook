@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1f2e">
+<meta name="description" content="부산울산지방병무청 직원 연락처 검색 및 관리 앱">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="병무청 전화번호부">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%235B9FFF' width='192' height='192'/><text x='96' y='120' font-size='100' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>📇</text></svg>">
+<title>부산울산지방병무청 전화번호부</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F8FC;
+    --surface:#FFFFFF;
+    --ink:#1B2130;
+    --ink-soft:#7A8296;
+    --primary:#3B5BFF;
+    --primary-soft:#E8ECFF;
+    --primary-deep:#2743D6;
+    --mint:#00C2A8;
+    --coral:#FF8B6B;
+    --line:#EAEDF4;
+    --danger:#EF5B5B;
+    --shadow: 0 4px 16px rgba(30,41,80,0.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#12141C;
+      --surface:#1C1F2B;
+      --ink:#EDEFF7;
+      --ink-soft:#9299AC;
+      --primary:#7C93FF;
+      --primary-soft:#232A47;
+      --primary-deep:#AEBBFF;
+      --mint:#3DDCC4;
+      --coral:#FFA485;
+      --line:#2A2E3D;
+      --danger:#FF7A7A;
+      --shadow: 0 4px 16px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12141C;
+    --surface:#1C1F2B;
+    --ink:#EDEFF7;
+    --ink-soft:#9299AC;
+    --primary:#7C93FF;
+    --primary-soft:#232A47;
+    --primary-deep:#AEBBFF;
+    --mint:#3DDCC4;
+    --coral:#FFA485;
+    --line:#2A2E3D;
+    --danger:#FF7A7A;
+    --shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    line-height:1.5;
+  }
+  .wrap{
+    max-width:600px;
+    margin:0 auto;
+    padding:16vh 20px 60px;
+    min-height:100vh;
+    transition:padding 0.25s ease;
+  }
+  .wrap.active{
+    padding-top:32px;
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:26px;
+    transition:margin 0.25s ease, justify-content 0.25s ease;
+  }
+  .wrap.active .brand{
+    justify-content:flex-start;
+    margin-bottom:18px;
+  }
+  .brand-dot{
+    width:30px;
+    height:30px;
+    border-radius:10px;
+    background:linear-gradient(135deg, var(--primary), var(--mint));
+    flex-shrink:0;
+  }
+  h1{
+    font-weight:800;
+    font-size:1.25rem;
+    margin:0;
+    color:var(--ink);
+    letter-spacing:-0.01em;
+  }
+
+  .searchbar{
+    position:relative;
+  }
+  .searchbar input{
+    width:100%;
+    padding:15px 18px 15px 46px;
+    font-size:1rem;
+    font-family:inherit;
+    border:1.5px solid var(--line);
+    border-radius:16px;
+    background:var(--surface);
+    color:var(--ink);
+    box-shadow:var(--shadow);
+  }
+  .searchbar input::placeholder{ color:var(--ink-soft); }
+  .searchbar input:focus-visible{
+    outline:none;
+    border-color:var(--primary);
+  }
+  .searchbar::before{
+    content:"";
+    position:absolute;
+    left:18px;
+    top:50%;
+    width:15px;
+    height:15px;
+    transform:translateY(-50%);
+    border:2px solid var(--primary);
+    border-radius:50%;
+    box-shadow: 7px 7px 0 -3px var(--primary);
+  }
+
+  .utility-row{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+    margin-top:16px;
+  }
+  .wrap.active .utility-row{
+    justify-content:flex-start;
+  }
+  .utility-row button{
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.95rem;
+    font-weight:700;
+    padding:13px 20px;
+    border-radius:16px;
+    border:none;
+    background:var(--primary-soft);
+    color:var(--primary-deep);
+    flex:1;
+    transition:transform 0.12s ease, opacity 0.12s ease;
+  }
+  @media (min-width:480px){
+    .utility-row button{ flex:0 0 auto; }
+  }
+  .utility-row button:active{ transform:scale(0.97); }
+  .utility-row button.primary{
+    background:var(--primary);
+    color:#fff;
+    box-shadow:0 6px 16px rgba(59,91,255,0.28);
+  }
+  .utility-row button:focus-visible{
+    outline:2px solid var(--primary);
+    outline-offset:2px;
+  }
+
+  .tabs{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:2px 2px 6px;
+    margin:20px 0 6px;
+  }
+  .tabs::-webkit-scrollbar{ height:0; }
+  .tab{
+    flex:0 0 auto;
+    padding:9px 16px;
+    font-size:0.85rem;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:var(--surface);
+    border:1.5px solid var(--line);
+    border-radius:20px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .tab.active{
+    color:#fff;
+    background:var(--primary);
+    border-color:var(--primary);
+  }
+  .tab:focus-visible{
+    outline:2px solid var(--primary);
+    outline-offset:2px;
+  }
+
+  .section-label{
+    margin:24px 2px 10px;
+    color:var(--ink-soft);
+    font-size:0.78rem;
+    font-weight:700;
+  }
+  .section-label:first-child{ margin-top:6px; }
+
+  .card{
+    background:var(--surface);
+    border:0.5px solid var(--border-soft);
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .card .info{ min-width:0; flex:1; }
+  .card .dept{
+    font-size:19px;
+    font-weight:700;
+    color:var(--primary);
+    margin-bottom:6px;
+  }
+  .card .name-row{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex-wrap:wrap;
+  }
+  .card .name{
+    font-weight:600;
+    font-size:18px;
+    color:var(--ink);
+    white-space:nowrap;
+  }
+  .card .duty{
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-soft);
+    background:var(--bg-card);
+    padding:5px 11px;
+    border-radius:12px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .new-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:2px;
+    background:var(--coral);
+    color:#fff;
+    font-size:0.68rem;
+    font-weight:800;
+    padding:2px 8px;
+    border-radius:9px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .card .meta{
+    margin-top:2px;
+    font-size:0.8rem;
+    color:var(--ink-soft);
+  }
+  .card a.phone-link{
+    color:var(--ink);
+    background:transparent;
+    text-decoration:none;
+    font-weight:600;
+    font-size:19px;
+    padding:0;
+    border-radius:0;
+    white-space:nowrap;
+    flex-shrink:0;
+    align-self:center;
+  }
+  .card-actions{ display:none; }
+
+  .card{ touch-action:pan-y; user-select:none; position:relative; }
+  .card.dragging{ transition:none; }
+
+  .admin-footer{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    display:flex;
+    justify-content:center;
+    padding:14px 20px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, var(--bg) 60%, transparent);
+    pointer-events:none;
+  }
+  .admin-footer button{
+    pointer-events:auto;
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:0.78rem;
+    font-family:inherit;
+    cursor:pointer;
+    padding:6px 10px;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  .admin-footer button:hover{ color:var(--primary); }
+  .admin-footer button.on{ color:var(--mint); font-weight:700; }
+
+  .modal.small{ max-width:340px; }
+  .modal p.confirm-msg{
+    font-size:0.95rem;
+    color:var(--ink);
+    margin:0 0 4px;
+    text-align:center;
+    padding:10px 0 4px;
+  }
+
+  .archive-banner{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:var(--primary-soft);
+    color:var(--primary-deep);
+    border-radius:14px;
+    padding:12px 14px;
+    margin-top:14px;
+    font-size:0.85rem;
+    font-weight:600;
+  }
+  .archive-banner button{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:7px 12px;
+    font-size:0.78rem;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    flex-shrink:0;
+  }
+
+  .admin-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:14px;
+  }
+  .admin-bar button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:12px;
+    font-size:0.82rem;
+    font-weight:700;
+    padding:9px 14px;
+  }
+  #adminDateChip{
+    background:var(--mint);
+    color:#0A2E28;
+  }
+  #adminExit{
+    background:transparent;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    text-underline-offset:3px;
+    padding:9px 4px;
+  }
+  #adminExit:hover{ color:var(--danger); }
+
+  .archive-item{
+    width:100%;
+    text-align:left;
+    padding:13px 14px;
+    border:1.5px solid var(--line);
+    border-radius:12px;
+    background:var(--bg);
+    color:var(--ink);
+    font-size:0.92rem;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    margin-bottom:8px;
+  }
+  .archive-item:hover{ border-color:var(--primary); }
+  .archive-item .archive-item-sub{
+    display:block;
+    font-size:0.76rem;
+    font-weight:500;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  .archive-empty{
+    color:var(--ink-soft);
+    font-size:0.88rem;
+    text-align:center;
+    padding:18px 4px;
+  }
+
+  .empty{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--ink-soft);
+    font-size:0.88rem;
+  }
+
+  /* modal */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(20,24,40,0.4);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:10;
+  }
+  .overlay.open{ display:flex; }
+  @media (min-width:600px){
+    .overlay{ align-items:center; }
+  }
+  .modal{
+    background:var(--surface);
+    width:100%;
+    max-width:440px;
+    border-radius:22px 22px 0 0;
+    padding:24px 22px 26px;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  @media (min-width:600px){
+    .modal{ border-radius:22px; }
+  }
+  .modal h2{
+    font-size:1.15rem;
+    font-weight:800;
+    margin:0 0 18px;
+    color:var(--ink);
+  }
+  .field{ margin-bottom:13px; }
+  .field label{
+    display:block;
+    font-size:0.78rem;
+    font-weight:600;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:11px 12px;
+    font-size:0.92rem;
+    border:1.5px solid var(--line);
+    border-radius:12px;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:inherit;
+  }
+  .field input:focus-visible, .field select:focus-visible{
+    outline:none;
+    border-color:var(--primary);
+  }
+  .field .newdept{
+    margin-top:8px;
+  }
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    margin-top:20px;
+  }
+  .modal-actions button{
+    flex:1;
+    padding:13px;
+    border-radius:14px;
+    font-size:0.92rem;
+    font-weight:700;
+    border:1.5px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .modal-actions button.primary{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:#fff;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:22px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--bg);
+    padding:11px 20px;
+    border-radius:24px;
+    font-size:0.83rem;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s;
+    z-index:20;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    <h1>부산울산지방병무청 전화번호부</h1>
+  </div>
+
+  <div class="searchbar">
+    <input type="text" id="searchInput" placeholder="이름 또는 업무로 검색" autofocus>
+  </div>
+
+  <div class="archive-banner" id="archiveBanner" style="display:none;">
+    <span id="archiveBannerText"></span>
+    <button id="archiveDateChange">날짜 변경</button>
+    <button id="archiveExit">돌아가기</button>
+  </div>
+
+  <div class="admin-bar" id="adminBar" style="display:none;">
+    <button id="adminDateChip">📅 오늘</button>
+    <button id="adminExit">관리자 모드 종료</button>
+  </div>
+
+  <div class="utility-row">
+    <button id="browseToggle">과별로 보기</button>
+    <button id="archiveToggle">아카이브</button>
+    <button id="openAdd" class="primary" style="display:none;">+ 연락처 추가</button>
+  </div>
+
+  <div class="tabs" id="tabs" style="display:none;"></div>
+
+  <div id="listArea"></div>
+</div>
+
+<div class="admin-footer">
+  <button id="adminToggle">관리자 모드로 들어가기</button>
+</div>
+
+<div class="overlay" id="adminOverlay">
+  <div class="modal small">
+    <h2>관리자 모드</h2>
+    <div class="field">
+      <label for="adminPassword">비밀번호</label>
+      <input type="password" id="adminPassword" placeholder="비밀번호 입력">
+    </div>
+    <div class="modal-actions">
+      <button id="adminCancel">취소</button>
+      <button class="primary" id="adminOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirmOverlay">
+  <div class="modal small">
+    <p class="confirm-msg" id="confirmMessage"></p>
+    <div class="modal-actions">
+      <button id="confirmCancel">취소</button>
+      <button class="primary" id="confirmOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="archiveOverlay">
+  <div class="modal small">
+    <h2 id="archiveModalTitle">아카이브</h2>
+    <div id="archiveList"></div>
+    <div class="modal-actions">
+      <button id="archiveCancel">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">연락처 추가</h2>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label for="fName">이름 *</label>
+      <input type="text" id="fName" placeholder="홍길동">
+    </div>
+    <div class="field">
+      <label for="fDept">과 / 부서 *</label>
+      <select id="fDept">
+        <option value="">-- 선택 --</option>
+        <option value="__new__">+ 새 부서 입력</option>
+      </select>
+      <input type="text" id="fDeptNew" class="newdept" placeholder="새 부서명 입력" style="display:none;">
+    </div>
+    <div class="field">
+      <label for="fDuty">담당 업무</label>
+      <input type="text" id="fDuty" placeholder="예: 병력동원훈련소집">
+    </div>
+    <div class="field">
+      <label for="fPhone">전화번호 *</label>
+      <input type="text" id="fPhone" placeholder="051-000-0000">
+    </div>
+    <div class="field">
+      <label for="fNote">비고</label>
+      <input type="text" id="fNote" placeholder="선택 입력">
+    </div>
+    <div class="modal-actions">
+      <button id="cancelBtn">취소</button>
+      <button class="primary" id="saveBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'busan-ulsan-mma-contacts-v9';
+const ARCHIVE_KEY = 'busan-ulsan-mma-archive-v1';
+const AVATAR_COLORS = ['#3B5BFF', '#00C2A8', '#FF8B6B', '#8A5CF6', '#2AB673'];
+const NEW_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000; // 3일 이내 변경분을 "새로 변경됨"으로 표시
+
+const seedData = [
+  // 부속실
+  { id:'p001', name:'김창영', dept:'부속실', duty:'', phone:'051-667-5201', note:'' },
+  { id:'p002', name:'김택로', dept:'부속실', duty:'검사장', phone:'051-667-5281', note:'' },
+
+  // 운영지원과
+  { id:'p010', name:'김은미', dept:'운영지원과', duty:'과장', phone:'051-667-5204', note:'' },
+  { id:'p011', name:'김군호', dept:'운영지원과', duty:'서무', phone:'051-667-5311', note:'' },
+  { id:'p012', name:'손성호', dept:'운영지원과', duty:'기록물, 보안, 정보공개', phone:'051-667-5224', note:'' },
+  { id:'p013', name:'김수영', dept:'운영지원과', duty:'기획, 비상, 조직', phone:'051-667-5225', note:'' },
+  { id:'p014', name:'이영림', dept:'운영지원과', duty:'인사, 상훈', phone:'051-667-5223', note:'' },
+  { id:'p015', name:'류유경', dept:'운영지원과', duty:'감사, 총무, 교육', phone:'051-667-5292', note:'' },
+  { id:'p016', name:'김형태', dept:'운영지원과', duty:'복무기관담당자, 맞춤형복지', phone:'051-667-5422', note:'' },
+  { id:'p017', name:'최용준', dept:'운영지원과', duty:'청사방호, 방문민원안내, 구내식당', phone:'051-667-5228', note:'' },
+  { id:'p018', name:'최윤아', dept:'운영지원과', duty:'실무수습', phone:'051-667-5293', note:'' },
+  { id:'p019', name:'박상현', dept:'운영지원과', duty:'성과, 홍보', phone:'051-667-5312', note:'' },
+  { id:'p020', name:'박주영', dept:'운영지원과', duty:'성과, 변화관리, 적극행정', phone:'051-667-5291', note:'' },
+  { id:'p021', name:'백수화', dept:'운영지원과', duty:'방송, 홍보, 병역명문가', phone:'051-667-5227', note:'' },
+  { id:'p022', name:'임윤철', dept:'운영지원과', duty:'경리, 시설', phone:'051-667-5313', note:'' },
+  { id:'p023', name:'이진혁', dept:'운영지원과', duty:'물품, 계약', phone:'051-667-5294', note:'' },
+  { id:'p024', name:'이성우', dept:'운영지원과', duty:'예산, 세출', phone:'051-667-5226', note:'' },
+  { id:'p025', name:'이현배', dept:'운영지원과', duty:'기계, 소방, 시설관리', phone:'051-667-5296', note:'' },
+  { id:'p026', name:'김태우', dept:'운영지원과', duty:'전기, 국유재산, 시설관리', phone:'051-667-5297', note:'' },
+  { id:'p027', name:'하정호', dept:'운영지원과', duty:'환경미화(총괄)', phone:'051-667-5491', note:'' },
+
+  // 병역판정검사과 (병역판정검사장 포함)
+  { id:'p040', name:'조용훈', dept:'병역판정검사과', duty:'과장', phone:'051-667-5205', note:'' },
+  { id:'p041', name:'박미아', dept:'병역판정검사과', duty:'병역판정계획(출원병면, 제자공개, 병역이행)', phone:'051-667-5314', note:'' },
+  { id:'p042', name:'강태우', dept:'병역판정검사과', duty:'국외이주, 영주권, 신청, 제외국민2세', phone:'051-667-5324', note:'' },
+  { id:'p043', name:'이상호', dept:'병역판정검사과', duty:'특사경, 확인신점', phone:'051-667-5232', note:'' },
+  { id:'p044', name:'이윤정', dept:'병역판정검사과', duty:'계획, 병역준비역, 신상변동, 연기자, 보안', phone:'051-667-5231', note:'' },
+  { id:'p045', name:'이민경', dept:'병역판정검사과', duty:'병역판정검사(검사장)', phone:'051-667-5315', note:'' },
+  { id:'p046', name:'문희은', dept:'병역판정검사과', duty:'적성분류, 출원병면(악성혈액)', phone:'051-667-5282', note:'' },
+  { id:'p047', name:'권오민', dept:'병역판정검사과', duty:'민원상담관, 이의제기, 출원병면(장애)', phone:'051-667-5278', note:'' },
+  { id:'p048', name:'하수희', dept:'병역판정검사과', duty:'7급채점, 통계', phone:'051-667-5277', note:'' },
+  { id:'p049', name:'남미회', dept:'병역판정검사과', duty:'중점소, 위탁', phone:'051-667-5276', note:'' },
+  { id:'p050', name:'최문경', dept:'병역판정검사과', duty:'서류보완', phone:'051-667-5279', note:'' },
+  { id:'p051', name:'장아민', dept:'병역판정검사과', duty:'신장체중, 서무', phone:'051-667-5283', note:'' },
+  { id:'p052', name:'이지현', dept:'병역판정검사과', duty:'심리검사', phone:'051-667-5286', note:'' },
+  { id:'p053', name:'전병욱', dept:'병역판정검사과', duty:'검사접수, 여비', phone:'051-667-5287', note:'' },
+  { id:'p054', name:'김채모', dept:'병역판정검사과', duty:'영상의학', phone:'051-667-5317', note:'' },
+  { id:'p055', name:'권형우', dept:'병역판정검사과', duty:'방사선', phone:'051-667-5433', note:'' },
+  { id:'p056', name:'최지현', dept:'병역판정검사과', duty:'방사선', phone:'051-667-5432', note:'' },
+  { id:'p057', name:'허영애', dept:'병역판정검사과', duty:'혈압측정', phone:'051-667-5284', note:'' },
+  { id:'p058', name:'이해리', dept:'병역판정검사과', duty:'임상병리', phone:'051-667-5332', note:'' },
+  { id:'p059', name:'김정민', dept:'병역판정검사과', duty:'임상병리', phone:'051-667-5431', note:'' },
+  { id:'p060', name:'이정윤', dept:'병역판정검사과', duty:'임상병리', phone:'051-667-5430', note:'' },
+  { id:'p061', name:'김미진', dept:'병역판정검사과', duty:'임상병리', phone:'051-667-5289', note:'' },
+  { id:'p062', name:'정욱', dept:'병역판정검사과', duty:'임상심리', phone:'051-667-5484', note:'' },
+  { id:'p063', name:'배상윤', dept:'병역판정검사과', duty:'임상심리', phone:'051-667-5485', note:'' },
+  { id:'p064', name:'정재홍', dept:'병역판정검사과', duty:'임상심리', phone:'051-667-5483', note:'' },
+  { id:'p065', name:'김정안', dept:'병역판정검사과', duty:'임상심리', phone:'051-667-5481', note:'' },
+  { id:'p066', name:'김성훈', dept:'병역판정검사과', duty:'청원경찰', phone:'051-667-5488', note:'' },
+  { id:'p067', name:'박지원', dept:'병역판정검사과', duty:'청원경찰', phone:'051-667-5288', note:'' },
+
+  // 현역입영과 (병역진로설계지원센터 포함)
+  { id:'p080', name:'신정수', dept:'현역입영과', duty:'과장', phone:'051-667-5206', note:'' },
+  { id:'p081', name:'안성호', dept:'현역입영과', duty:'현역입영(법무사범, 기피자공개, 상근자원관리, 국외연기)', phone:'051-667-5318', note:'' },
+  { id:'p082', name:'국민정', dept:'현역입영과', duty:'계획, 통지, BSC, 선거, 상근병역예비군수형자관리', phone:'051-667-5243', note:'' },
+  { id:'p083', name:'박춘수', dept:'현역입영과', duty:'집행연기, 실태조사', phone:'051-667-5244', note:'' },
+  { id:'p084', name:'박재현', dept:'현역입영과', duty:'집행연기(12,21,31,32,39,50사), 재병역판정검사', phone:'051-667-5246', note:'' },
+  { id:'p085', name:'배규리', dept:'현역입영과', duty:'서무, 재하연기, 징집여비, 자원병역이행', phone:'051-667-5242', note:'' },
+  { id:'p086', name:'김정수', dept:'현역입영과', duty:'집행연기(3,5,6,7,35,36,37사), 반송통지, 연기해소', phone:'051-667-5245', note:'' },
+  { id:'p087', name:'조정호', dept:'현역입영과', duty:'현역모집(특수병과, 병편)', phone:'051-667-5330', note:'' },
+  { id:'p088', name:'조세희', dept:'현역입영과', duty:'육군(기술행정, 추가), 신체등급변경원', phone:'051-667-5345', note:'' },
+  { id:'p089', name:'김미애', dept:'현역입영과', duty:'육군 전문특기병, 육군(동반입대, 직계, 연고지), 모집여비', phone:'051-667-5344', note:'' },
+  { id:'p090', name:'김수연', dept:'현역입영과', duty:'공군/해군/해병 경제적 배려대상, 모집귀가', phone:'051-667-5349', note:'' },
+  { id:'p091', name:'이혜비', dept:'현역입영과', duty:'병역진로설계지원센터', phone:'051-667-5531', note:'' },
+  { id:'p092', name:'이주현', dept:'현역입영과', duty:'운영계획, 취업맞춤형 전문상담관', phone:'051-667-5532', note:'' },
+  { id:'p093', name:'장은영', dept:'현역입영과', duty:'실적관리, 예산, 전문상담관', phone:'051-667-5533', note:'' },
+  { id:'p094', name:'이은승', dept:'현역입영과', duty:'전문상담관', phone:'051-667-5535', note:'' },
+  { id:'p095', name:'이재건', dept:'현역입영과', duty:'전문상담관', phone:'051-667-5537', note:'' },
+  { id:'p096', name:'전소윤', dept:'현역입영과', duty:'전문상담관', phone:'051-667-5536', note:'' },
+  { id:'p097', name:'이혜미', dept:'현역입영과', duty:'울산병역진로설계지원센터(겸임)', phone:'051-667-5541', note:'' },
+  { id:'p098', name:'조정회', dept:'현역입영과', duty:'사업홍보, 운영, 전문상담관, 입영문화제', phone:'051-667-5542', note:'' },
+  { id:'p099', name:'위영미', dept:'현역입영과', duty:'운영계획, 프로그램기획, 전문상담관, 입영문화제', phone:'051-667-5543', note:'' },
+  { id:'p100', name:'유영주', dept:'현역입영과', duty:'전문상담관', phone:'051-667-5544', note:'' },
+  { id:'p101', name:'신제현', dept:'현역입영과', duty:'전문상담관', phone:'051-667-5545', note:'' },
+
+  // 동원관리과
+  { id:'p120', name:'오재혁', dept:'동원관리과', duty:'과장', phone:'051-667-5208', note:'' },
+  { id:'p121', name:'변미화', dept:'동원관리과', duty:'동원계획(지자체교육)', phone:'051-667-5326', note:'' },
+  { id:'p122', name:'유기돈', dept:'동원관리과', duty:'동원계획', phone:'051-667-5261', note:'' },
+  { id:'p123', name:'이지영', dept:'동원관리과', duty:'예비군편성, 자원관리, 대체지정, 반송통지서', phone:'051-667-5468', note:'' },
+  { id:'p124', name:'손기범', dept:'동원관리과', duty:'지자체교육, 비밀, 보안', phone:'051-667-5262', note:'' },
+  { id:'p125', name:'유혜진', dept:'동원관리과', duty:'예산, 서무, 후순위 (09:00~17:00)', phone:'051-667-5263', note:'' },
+  { id:'p126', name:'변선연', dept:'동원관리과', duty:'동원훈련1', phone:'051-667-5327', note:'' },
+  { id:'p127', name:'박재언', dept:'동원관리과', duty:'해군, 연기', phone:'051-667-5466', note:'' },
+  { id:'p128', name:'김한주', dept:'동원관리과', duty:'계획, 통지', phone:'051-667-5269', note:'' },
+  { id:'p129', name:'이권우', dept:'동원관리과', duty:'육군, 연기', phone:'051-667-5267', note:'' },
+  { id:'p130', name:'서우진', dept:'동원관리과', duty:'육군, 연기(실무수습)', phone:'051-667-5268', note:'' },
+  { id:'p131', name:'안수진', dept:'동원관리과', duty:'동원훈련2', phone:'051-667-5328', note:'' },
+  { id:'p132', name:'이재훈', dept:'동원관리과', duty:'육군, 연기', phone:'051-667-5465', note:'' },
+  { id:'p133', name:'이동열', dept:'동원관리과', duty:'육군, 연기', phone:'051-667-5463', note:'' },
+  { id:'p134', name:'황윤재', dept:'동원관리과', duty:'육군, 연기', phone:'051-667-5467', note:'' },
+
+  // 사회복무과
+  { id:'p150', name:'김원식', dept:'사회복무과', duty:'과장', phone:'051-667-5207', note:'' },
+  { id:'p151', name:'김은정', dept:'사회복무과', duty:'소집계획', phone:'051-667-5321', note:'' },
+  { id:'p152', name:'정유경', dept:'사회복무과', duty:'배정, 계획, 선복무교육소집, 재병역판정검사', phone:'051-667-5251', note:'' },
+  { id:'p153', name:'신봉재', dept:'사회복무과', duty:'통지, 자원관리', phone:'051-667-5256', note:'' },
+  { id:'p154', name:'이윤정', dept:'사회복무과', duty:'연기, 장기대기, 병무사법관리', phone:'051-667-5254', note:'' },
+  { id:'p155', name:'우혜원', dept:'사회복무과', duty:'서무, 소집결과정리, 여비지급, 헌투자, 공보의', phone:'051-667-5252', note:'' },
+  { id:'p156', name:'김효성', dept:'사회복무과', duty:'산업지원(실태조사, 교육)', phone:'051-667-5322', note:'' },
+  { id:'p157', name:'조숙희', dept:'사회복무과', duty:'지정업체관리, 신상변동(전동/산업, 전직, 만료 등), 편입, 배정관리', phone:'051-667-5238', note:'' },
+  { id:'p158', name:'김동성', dept:'사회복무과', duty:'실태조사, 신규편입자교육, BSC', phone:'051-667-5258', note:'' },
+  { id:'p159', name:'김영혜', dept:'사회복무과', duty:'승선관리(권익침해신고계획)', phone:'051-667-5323', note:'' },
+  { id:'p160', name:'전형록', dept:'사회복무과', duty:'승선예비역관리(편입, 만료, 편입취소 등)', phone:'051-667-5255', note:'' },
+  { id:'p161', name:'김유정', dept:'사회복무과', duty:'군사교육소집, 실태조사, 권익보호상담, 신상이동', phone:'051-667-5260', note:'' },
+  { id:'p162', name:'배강형', dept:'사회복무과', duty:'신상이동, 실태조사, 권익보호상담', phone:'051-667-5259', note:'' },
+
+  // 복무관리과
+  { id:'p180', name:'장주태', dept:'복무관리과', duty:'과장', phone:'051-667-5210', note:'' },
+  { id:'p181', name:'황지은', dept:'복무관리과', duty:'복무계획(보상심의위원회, 예산)', phone:'051-667-5335', note:'' },
+  { id:'p182', name:'홍현기', dept:'복무관리과', duty:'계획, 분할복무', phone:'051-667-5391', note:'' },
+  { id:'p183', name:'이남영', dept:'복무관리과', duty:'신상변동, 복무포탈, 복무만료(중단), 수학', phone:'051-667-5393', note:'' },
+  { id:'p184', name:'박보은', dept:'복무관리과', duty:'복무교육(기본, 지도), 수송, 서무', phone:'051-667-5394', note:'' },
+  { id:'p185', name:'구형경', dept:'복무관리과', duty:'복무지도1(부산 사하구, 서구)', phone:'051-667-5336', note:'' },
+  { id:'p186', name:'오윤경', dept:'복무관리과', duty:'금정구, 부적합, 겸직계획', phone:'051-667-5397', note:'' },
+  { id:'p187', name:'김태윤', dept:'복무관리과', duty:'부산교통공사, 강서구, 사상구', phone:'051-667-5399', note:'' },
+  { id:'p188', name:'이혜진', dept:'복무관리과', duty:'해운대구, 기장군, 영도구, 중구', phone:'051-667-5398', note:'' },
+  { id:'p189', name:'정재훈', dept:'복무관리과', duty:'수영구, 북구, 남구, 동구', phone:'051-667-5392', note:'' },
+  { id:'p190', name:'이성택', dept:'복무관리과', duty:'연제구, 동래구, 부산진구', phone:'051-667-5396', note:'' },
+  { id:'p191', name:'김정금', dept:'복무관리과', duty:'복무지도2(울산 울주군, 울산 중구)', phone:'051-667-5522', note:'' },
+  { id:'p192', name:'김진충', dept:'복무관리과', duty:'울산 남구, 울산 동구, 울산 북구', phone:'051-667-5521', note:'' },
+
+  // 고객지원과
+  { id:'p210', name:'최민경', dept:'고객지원과', duty:'과장', phone:'051-667-5209', note:'' },
+  { id:'p211', name:'박찬근', dept:'고객지원과', duty:'고객지원1(병역사항공개, 국민신문고)', phone:'051-667-5325', note:'' },
+  { id:'p212', name:'손지연', dept:'고객지원과', duty:'계획, BSC, 기록정정, 기관회신(보훈청)', phone:'051-667-5512', note:'' },
+  { id:'p213', name:'문정은', dept:'고객지원과', duty:'병적증명, FAX, 방문, 블록체인, 전자지갑', phone:'051-667-5511', note:'' },
+  { id:'p214', name:'김지형', dept:'고객지원과', duty:'병역처분변경원, 전역증, 병적증명(FAX, 방문)', phone:'051-667-5514', note:'' },
+  { id:'p215', name:'황민혜', dept:'고객지원과', duty:'병적증명, FAX, 보훈청, 개인정보열람청구 (14:00~18:00)', phone:'051-667-5513', note:'' },
+  { id:'p216', name:'김효정', dept:'고객지원과', duty:'서무 (09:00~14:00)', phone:'051-667-5516', note:'' },
+  { id:'p217', name:'정인아', dept:'고객지원과', duty:'고객지원2(생계감면)', phone:'051-667-5316', note:'' },
+  { id:'p218', name:'오재현', dept:'고객지원과', duty:'국외여행허가, 보안', phone:'051-667-5356', note:'' },
+  { id:'p219', name:'홍지은', dept:'고객지원과', duty:'정보통신(정보보호총괄, 동원, 사회복무)', phone:'051-667-5329', note:'' },
+  { id:'p220', name:'김영운', dept:'고객지원과', duty:'통신, PC', phone:'051-667-5220', note:'' },
+  { id:'p221', name:'문정대', dept:'고객지원과', duty:'현역민원, 권한, 홈페이지, 개인정보보호, 예산, 장비', phone:'051-667-5274', note:'' },
+  { id:'p222', name:'강병훈', dept:'고객지원과', duty:'병역판정검사, 정보보안, 산업지원, 복무관리', phone:'051-667-5273', note:'' },
+
+  // 병역판정검사의사
+  { id:'p240', name:'강민성', dept:'병역판정검사의사', duty:'수석', phone:'051-667-5470', note:'' },
+  { id:'p241', name:'김인기', dept:'병역판정검사의사', duty:'안과', phone:'051-667-5471', note:'' },
+  { id:'p242', name:'김동하', dept:'병역판정검사의사', duty:'피부·비뇨기과', phone:'051-667-5570', note:'' },
+  { id:'p243', name:'김동민', dept:'병역판정검사의사', duty:'신경·정신과1', phone:'051-667-5472', note:'' },
+  { id:'p244', name:'김광현', dept:'병역판정검사의사', duty:'신경·정신과2', phone:'051-667-5473', note:'' },
+  { id:'p245', name:'하두인', dept:'병역판정검사의사', duty:'내과1', phone:'051-667-5478', note:'' },
+  { id:'p246', name:'권재상', dept:'병역판정검사의사', duty:'내과2', phone:'051-667-5571', note:'' },
+  { id:'p247', name:'권유성', dept:'병역판정검사의사', duty:'정형외과1', phone:'051-667-5474', note:'' },
+  { id:'p248', name:'유승윤', dept:'병역판정검사의사', duty:'정형외과2', phone:'051-667-5475', note:'' },
+  { id:'p249', name:'김세윤', dept:'병역판정검사의사', duty:'신경외과', phone:'051-667-5480', note:'' },
+  { id:'p250', name:'고준용', dept:'병역판정검사의사', duty:'이비인후과', phone:'051-667-5476', note:'' },
+  { id:'p251', name:'정유하', dept:'병역판정검사의사', duty:'치과', phone:'051-667-5477', note:'' },
+  { id:'p252', name:'현재환', dept:'병역판정검사의사', duty:'영상의학과', phone:'051-667-5479', note:'' },
+];
+
+function loadContacts(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(seedData));
+      return [...seedData];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [...seedData];
+  }catch(e){
+    return [...seedData];
+  }
+}
+
+function saveContacts(list){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }catch(e){
+    showToast('저장에 실패했습니다');
+  }
+  snapshotToday(list);
+}
+
+function todayStr(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateLabel(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const label = `${y}년 ${m}월 ${d}일`;
+  return dateStr === todayStr() ? `${label} (오늘, 진행 중)` : label;
+}
+
+function loadArchive(){
+  try{
+    const raw = localStorage.getItem(ARCHIVE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  }catch(e){
+    return {};
+  }
+}
+
+function snapshotToday(list){
+  try{
+    const arc = loadArchive();
+    arc[todayStr()] = list;
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc));
+  }catch(e){
+    // 아카이브 저장 실패는 조용히 무시 (연락처 저장 자체는 이미 완료됨)
+  }
+}
+
+let contacts = loadContacts();
+snapshotToday(contacts);
+let activeTab = '전체';
+let searchTerm = '';
+let browseMode = false;
+let adminMode = false;
+let archiveDate = null;
+let adminWorkingDate = null;
+
+const wrapEl = document.getElementById('wrap');
+const tabsEl = document.getElementById('tabs');
+const listArea = document.getElementById('listArea');
+const searchInput = document.getElementById('searchInput');
+const browseToggle = document.getElementById('browseToggle');
+const openAddBtn = document.getElementById('openAdd');
+const adminToggle = document.getElementById('adminToggle');
+const adminFooter = document.querySelector('.admin-footer');
+const adminOverlay = document.getElementById('adminOverlay');
+const adminPassword = document.getElementById('adminPassword');
+const adminBar = document.getElementById('adminBar');
+const adminDateChip = document.getElementById('adminDateChip');
+const adminExit = document.getElementById('adminExit');
+const confirmOverlay = document.getElementById('confirmOverlay');
+const confirmMessage = document.getElementById('confirmMessage');
+const archiveToggle = document.getElementById('archiveToggle');
+const archiveOverlay = document.getElementById('archiveOverlay');
+const archiveModalTitle = document.getElementById('archiveModalTitle');
+const archiveList = document.getElementById('archiveList');
+const archiveBanner = document.getElementById('archiveBanner');
+const archiveBannerText = document.getElementById('archiveBannerText');
+const archiveExit = document.getElementById('archiveExit');
+const archiveDateChange = document.getElementById('archiveDateChange');
+const overlay = document.getElementById('overlay');
+const modalTitle = document.getElementById('modalTitle');
+const fName = document.getElementById('fName');
+const fDept = document.getElementById('fDept');
+const fDeptNew = document.getElementById('fDeptNew');
+const fDuty = document.getElementById('fDuty');
+const fPhone = document.getElementById('fPhone');
+const fNote = document.getElementById('fNote');
+const editId = document.getElementById('editId');
+const toast = document.getElementById('toast');
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(()=> toast.classList.remove('show'), 1600);
+}
+
+function getDepartments(list){
+  const set = new Set((list||contacts).map(c => c.dept).filter(Boolean));
+  return Array.from(set).sort((a,b)=>a.localeCompare(b,'ko'));
+}
+
+function getWorkingList(){
+  if(!adminWorkingDate || adminWorkingDate === todayStr()) return contacts;
+  const arc = loadArchive();
+  return arc[adminWorkingDate] || [];
+}
+
+function commitWorkingList(list){
+  if(!adminWorkingDate || adminWorkingDate === todayStr()){
+    contacts = list;
+    saveContacts(contacts);
+  }else{
+    const arc = loadArchive();
+    arc[adminWorkingDate] = list;
+    try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }
+    catch(e){ showToast('저장에 실패했습니다'); }
+  }
+}
+
+function chipLabel(dateStr){
+  if(!dateStr || dateStr === todayStr()) return '오늘';
+  const [,m,d] = dateStr.split('-').map(Number);
+  return `${m}월 ${d}일`;
+}
+
+function effectiveContacts(){
+  if(adminMode) return getWorkingList();
+  if(archiveDate){
+    const arc = loadArchive();
+    return arc[archiveDate] || [];
+  }
+  return contacts;
+}
+
+function isActiveView(){
+  return searchTerm.trim() !== '' || browseMode || !!archiveDate || adminMode;
+}
+
+function updateWrapState(){
+  wrapEl.classList.toggle('active', isActiveView());
+}
+
+function renderTabs(){
+  if(!browseMode){
+    tabsEl.style.display = 'none';
+    tabsEl.innerHTML = '';
+    return;
+  }
+  tabsEl.style.display = 'flex';
+  const depts = getDepartments(effectiveContacts());
+  tabsEl.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tab' + (activeTab === '전체' ? ' active' : '');
+  allBtn.textContent = '전체';
+  allBtn.onclick = () => { activeTab = '전체'; render(); };
+  tabsEl.appendChild(allBtn);
+  depts.forEach(d => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (activeTab === d ? ' active' : '');
+    b.textContent = d;
+    b.onclick = () => { activeTab = d; render(); };
+    tabsEl.appendChild(b);
+  });
+}
+
+function renderDeptOptions(){
+  const depts = getDepartments(adminMode ? getWorkingList() : contacts);
+  fDept.innerHTML = '<option value="">-- 선택 --</option>' +
+    depts.map(d => `<option value="${escapeAttr(d)}">${escapeHtml(d)}</option>`).join('') +
+    '<option value="__new__">+ 새 부서 입력</option>';
+}
+
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+function matchesSearch(c, term){
+  if(!term) return true;
+  const t = term.toLowerCase();
+  return (c.name||'').toLowerCase().includes(t) || (c.duty||'').toLowerCase().includes(t);
+}
+
+function colorFor(name){
+  let hash = 0;
+  for(let i=0;i<name.length;i++){ hash = name.charCodeAt(i) + ((hash << 5) - hash); }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function render(){
+  updateWrapState();
+  renderTabs();
+  browseToggle.textContent = browseMode ? '과별 보기 닫기' : '과별로 보기';
+  archiveToggle.style.display = adminMode ? 'none' : '';
+  openAddBtn.style.display = adminMode ? '' : 'none';
+  adminFooter.style.display = isActiveView() ? 'none' : '';
+
+  adminBar.style.display = adminMode ? 'flex' : 'none';
+  if(adminMode){
+    adminDateChip.textContent = '📅 ' + chipLabel(adminWorkingDate);
+  }
+
+  if(archiveDate && !adminMode){
+    archiveBanner.style.display = 'flex';
+    archiveBannerText.textContent = formatDateLabel(archiveDate) + ' 기록 보기 중';
+  }else{
+    archiveBanner.style.display = 'none';
+  }
+
+  listArea.innerHTML = '';
+
+  if(!isActiveView()){
+    return;
+  }
+
+  const sourceList = effectiveContacts();
+  let filtered = sourceList.filter(c => matchesSearch(c, searchTerm));
+  if(browseMode && activeTab !== '전체'){
+    filtered = filtered.filter(c => c.dept === activeTab);
+  }
+
+  if(filtered.length === 0){
+    listArea.innerHTML = '<div class="empty">검색 결과가 없습니다. 다른 이름이나 업무로 검색해보세요.</div>';
+    return;
+  }
+
+  const groupByDept = browseMode && activeTab === '전체';
+  if(!groupByDept){
+    listArea.appendChild(renderCards(filtered));
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(c => {
+    const key = c.dept || '미지정';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+  const deptKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+  deptKeys.forEach(dept => {
+    const label = document.createElement('div');
+    label.className = 'section-label';
+    label.textContent = dept;
+    listArea.appendChild(label);
+    listArea.appendChild(renderCards(groups[dept]));
+  });
+}
+
+function renderCards(list){
+  const frag = document.createDocumentFragment();
+  list.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const isNew = c.updatedAt && (Date.now() - c.updatedAt) < NEW_THRESHOLD_MS;
+    const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
+    card.innerHTML = `
+      <div class="info">
+        <div class="dept">${escapeHtml(c.dept)}</div>
+        <div class="name-row">
+          <span class="name">${escapeHtml(c.name)}</span>
+          ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
+        </div>
+      </div>
+      <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
+    `;
+    if(adminMode && !archiveDate){
+      attachSwipe(card, c);
+    }
+    frag.appendChild(card);
+  });
+  return frag;
+}
+
+function attachSwipe(card, contact){
+  let startX = 0, startY = 0, dx = 0, dragging = false;
+  const THRESHOLD = 64;
+
+  card.addEventListener('pointerdown', (e) => {
+    startX = e.clientX; startY = e.clientY; dx = 0; dragging = true;
+    card.classList.add('dragging');
+    card.setPointerCapture(e.pointerId);
+  });
+  card.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if(Math.abs(dy) > 60){ dragging = false; card.style.transform = ''; return; }
+    card.style.transform = `translateX(${dx}px)`;
+  });
+  function endDrag(){
+    if(!dragging) return;
+    dragging = false;
+    card.classList.remove('dragging');
+    card.style.transform = '';
+    if(dx > THRESHOLD){
+      showConfirm(`${contact.name}님의 연락처를 수정하시겠습니까?`, () => openEdit(contact.id));
+    }else if(dx < -THRESHOLD){
+      showConfirm(`${contact.name}님의 연락처를 삭제하시겠습니까?`, () => deleteContact(contact.id));
+    }
+    dx = 0;
+  }
+  card.addEventListener('pointerup', endDrag);
+  card.addEventListener('pointercancel', endDrag);
+}
+
+function openAdd(){
+  modalTitle.textContent = '연락처 추가';
+  editId.value = '';
+  fName.value = '';
+  fDuty.value = '';
+  fPhone.value = '';
+  fNote.value = '';
+  renderDeptOptions();
+  fDept.value = '';
+  fDeptNew.style.display = 'none';
+  fDeptNew.value = '';
+  overlay.classList.add('open');
+  fName.focus();
+}
+
+function openEdit(id){
+  const c = getWorkingList().find(x => x.id === id);
+  if(!c) return;
+  modalTitle.textContent = '연락처 수정';
+  editId.value = id;
+  fName.value = c.name || '';
+  fDuty.value = c.duty || '';
+  fPhone.value = c.phone || '';
+  fNote.value = c.note || '';
+  renderDeptOptions();
+  fDept.value = c.dept || '';
+  fDeptNew.style.display = 'none';
+  fDeptNew.value = '';
+  overlay.classList.add('open');
+}
+
+function closeModal(){
+  overlay.classList.remove('open');
+}
+
+function deleteContact(id){
+  const list = getWorkingList();
+  const c = list.find(x => x.id === id);
+  if(!c) return;
+  commitWorkingList(list.filter(x => x.id !== id));
+  render();
+  showToast('삭제되었습니다');
+}
+
+function saveContact(){
+  const name = fName.value.trim();
+  let dept = fDept.value;
+  if(dept === '__new__'){
+    dept = fDeptNew.value.trim();
+  }
+  const duty = fDuty.value.trim();
+  const phone = fPhone.value.trim();
+  const note = fNote.value.trim();
+
+  if(!name || !dept || !phone){
+    showToast('이름, 부서, 전화번호는 필수입니다');
+    return;
+  }
+
+  const id = editId.value;
+  const now = Date.now();
+  const list = getWorkingList();
+  let updatedList;
+  if(id){
+    updatedList = list.map(c => c.id === id ? {...c, name, dept, duty, phone, note, updatedAt: now} : c);
+    showToast('수정되었습니다');
+  }else{
+    updatedList = [...list, { id: 'c' + now, name, dept, duty, phone, note, updatedAt: now }];
+    showToast('추가되었습니다');
+  }
+  commitWorkingList(updatedList);
+  closeModal();
+  render();
+}
+
+fDept.addEventListener('change', () => {
+  fDeptNew.style.display = fDept.value === '__new__' ? 'block' : 'none';
+  if(fDept.value === '__new__') fDeptNew.focus();
+});
+
+searchInput.addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  render();
+});
+
+browseToggle.addEventListener('click', () => {
+  browseMode = !browseMode;
+  if(browseMode) activeTab = '전체';
+  render();
+});
+
+function openDatePicker(mode){
+  archiveModalTitle.textContent = mode === 'admin' ? '작업할 날짜 선택' : '아카이브';
+  const arc = loadArchive();
+  const dates = Object.keys(arc).sort((a,b)=> b.localeCompare(a));
+  archiveList.innerHTML = '';
+  if(dates.length === 0){
+    archiveList.innerHTML = '<div class="archive-empty">아직 저장된 이전 기록이 없습니다.<br>연락처가 수정되면 날짜별로 자동 저장됩니다.</div>';
+  }else{
+    dates.forEach(d => {
+      const btn = document.createElement('button');
+      btn.className = 'archive-item';
+      const count = (arc[d]||[]).length;
+      btn.innerHTML = `${escapeHtml(formatDateLabel(d))}<span class="archive-item-sub">${count}건 저장됨</span>`;
+      btn.onclick = () => {
+        if(mode === 'admin'){
+          adminWorkingDate = d;
+        }else{
+          archiveDate = d;
+          searchTerm = '';
+          searchInput.value = '';
+          browseMode = false;
+          activeTab = '전체';
+        }
+        archiveOverlay.classList.remove('open');
+        render();
+      };
+      archiveList.appendChild(btn);
+    });
+  }
+  archiveOverlay.classList.add('open');
+}
+
+archiveToggle.addEventListener('click', () => openDatePicker('view'));
+adminDateChip.addEventListener('click', () => openDatePicker('admin'));
+document.getElementById('archiveCancel').addEventListener('click', () => archiveOverlay.classList.remove('open'));
+archiveOverlay.addEventListener('click', (e) => { if(e.target === archiveOverlay) archiveOverlay.classList.remove('open'); });
+archiveExit.addEventListener('click', () => {
+  archiveDate = null;
+  render();
+});
+
+archiveDateChange.addEventListener('click', () => openDatePicker('view'));
+
+function showConfirm(message, onConfirm){
+  confirmMessage.textContent = message;
+  confirmOverlay.classList.add('open');
+  const okBtn = document.getElementById('confirmOk');
+  const cancelBtn = document.getElementById('confirmCancel');
+  function cleanup(){
+    confirmOverlay.classList.remove('open');
+    okBtn.removeEventListener('click', onOk);
+    cancelBtn.removeEventListener('click', onCancel);
+  }
+  function onOk(){ cleanup(); onConfirm(); }
+  function onCancel(){ cleanup(); }
+  okBtn.addEventListener('click', onOk);
+  cancelBtn.addEventListener('click', onCancel);
+}
+
+function openAdminLogin(){
+  adminPassword.value = '';
+  adminOverlay.classList.add('open');
+  setTimeout(() => adminPassword.focus(), 50);
+}
+
+function closeAdminLogin(){
+  adminOverlay.classList.remove('open');
+}
+
+function tryAdminLogin(){
+  if(adminPassword.value === '123!'){
+    adminMode = true;
+    adminWorkingDate = todayStr();
+    archiveDate = null;
+    closeAdminLogin();
+    showToast('관리자 모드입니다');
+    render();
+  }else{
+    showToast('비밀번호가 올바르지 않습니다');
+    adminPassword.value = '';
+    adminPassword.focus();
+  }
+}
+
+adminToggle.addEventListener('click', openAdminLogin);
+adminExit.addEventListener('click', () => {
+  adminMode = false;
+  adminWorkingDate = null;
+  showToast('일반 모드로 전환되었습니다');
+  render();
+});
+document.getElementById('adminOk').addEventListener('click', tryAdminLogin);
+document.getElementById('adminCancel').addEventListener('click', closeAdminLogin);
+adminPassword.addEventListener('keydown', (e) => { if(e.key === 'Enter') tryAdminLogin(); });
+adminOverlay.addEventListener('click', (e) => { if(e.target === adminOverlay) closeAdminLogin(); });
+
+document.getElementById('openAdd').onclick = openAdd;
+document.getElementById('cancelBtn').onclick = closeModal;
+document.getElementById('saveBtn').onclick = saveContact;
+overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
+
+render();
+
+// PWA Service Worker 등록
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(registration => {
+    console.log('Service Worker 등록 성공:', registration);
+  }).catch(error => {
+    console.log('Service Worker 등록 실패:', error);
+  });
+}
+</script>
+</body>
+</html>
