@@ -302,6 +302,13 @@
     word-break:keep-all;
     overflow-wrap:break-word;
   }
+  .search-hit{
+    background:rgba(255,196,0,0.35);
+    color:inherit;
+    border-radius:4px;
+    padding:0 2px;
+    font-weight:800;
+  }
   .new-badge{
     display:inline-flex;
     align-items:center;
@@ -1043,6 +1050,16 @@ function matchesSearch(c, term){
   return (c.name||'').toLowerCase().includes(t) || (c.duty||'').toLowerCase().includes(t);
 }
 
+function highlightMatch(text, term){
+  if(!term) return escapeHtml(text);
+  const idx = text.toLowerCase().indexOf(term.toLowerCase());
+  if(idx === -1) return escapeHtml(text);
+  const before = text.slice(0, idx);
+  const match = text.slice(idx, idx + term.length);
+  const after = text.slice(idx + term.length);
+  return `${escapeHtml(before)}<span class="search-hit">${escapeHtml(match)}</span>${escapeHtml(after)}`;
+}
+
 function colorFor(name){
   let hash = 0;
   for(let i=0;i<name.length;i++){ hash = name.charCodeAt(i) + ((hash << 5) - hash); }
@@ -1120,10 +1137,10 @@ function renderCards(list){
     card.innerHTML = `
       <div class="left">
         <div class="name-row">
-          <span class="name">${escapeHtml(c.name)}</span>
+          <span class="name">${highlightMatch(c.name, searchTerm.trim())}</span>
           <span class="dept">${escapeHtml(c.dept)}</span>
         </div>
-        ${c.duty ? `<div class="duty">${escapeHtml(c.duty)}</div>` : ''}
+        ${c.duty ? `<div class="duty">${highlightMatch(c.duty, searchTerm.trim())}</div>` : ''}
       </div>
       <div class="phone-col">
         <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
