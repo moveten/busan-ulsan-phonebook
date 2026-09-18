@@ -112,7 +112,7 @@
   }
   .searchbar input{
     width:100%;
-    padding:15px 18px 15px 46px;
+    padding:15px 46px 15px 46px;
     font-size:1rem;
     font-family:inherit;
     border:1.5px solid var(--line);
@@ -138,6 +138,26 @@
     border-radius:50%;
     box-shadow: 7px 7px 0 -3px var(--primary);
   }
+  .searchbar .clear-btn{
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    width:26px;
+    height:26px;
+    border:none;
+    border-radius:50%;
+    background:var(--bg-card);
+    color:var(--ink-soft);
+    font-size:15px;
+    line-height:1;
+    cursor:pointer;
+    display:none;
+    align-items:center;
+    justify-content:center;
+  }
+  .searchbar .clear-btn.show{ display:flex; }
+  .searchbar .clear-btn:hover{ color:var(--ink); }
 
   .utility-row{
     display:flex;
@@ -389,13 +409,13 @@
     color:#0A2E28;
   }
   #adminExit{
-    background:var(--bg-card);
-    color:var(--ink);
-    border:1px solid var(--border-soft);
-    text-decoration:none;
-    padding:9px 14px;
+    background:transparent;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    text-underline-offset:3px;
+    padding:9px 4px;
   }
-  #adminExit:hover{ color:var(--danger); border-color:var(--danger); }
+  #adminExit:hover{ color:var(--danger); }
 
   .archive-item{
     width:100%;
@@ -548,6 +568,7 @@
 
   <div class="searchbar">
     <input type="text" id="searchInput" placeholder="이름 또는 업무로 검색" autofocus>
+    <button type="button" id="searchClear" class="clear-btn" aria-label="검색어 지우기">✕</button>
   </div>
 
   <div class="archive-banner" id="archiveBanner" style="display:none;">
@@ -558,7 +579,7 @@
 
   <div class="admin-bar" id="adminBar" style="display:none;">
     <button id="adminDateChip">📅 오늘</button>
-    <button id="adminExit">← 일반 모드로 돌아가기</button>
+    <button id="adminExit">관리자 모드 종료</button>
   </div>
 
   <div class="utility-row">
@@ -880,6 +901,7 @@ const wrapEl = document.getElementById('wrap');
 const tabsEl = document.getElementById('tabs');
 const listArea = document.getElementById('listArea');
 const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
 const browseToggle = document.getElementById('browseToggle');
 const openAddBtn = document.getElementById('openAdd');
 const adminToggle = document.getElementById('adminToggle');
@@ -1209,6 +1231,15 @@ fDept.addEventListener('change', () => {
 
 searchInput.addEventListener('input', (e) => {
   searchTerm = e.target.value;
+  searchClear.classList.toggle('show', searchTerm.length > 0);
+  render();
+});
+
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  searchTerm = '';
+  searchClear.classList.remove('show');
+  searchInput.focus();
   render();
 });
 
@@ -1238,6 +1269,7 @@ function openDatePicker(mode){
           archiveDate = d;
           searchTerm = '';
           searchInput.value = '';
+          searchClear.classList.remove('show');
           browseMode = false;
           activeTab = '전체';
         }
@@ -1280,7 +1312,7 @@ function showConfirm(message, onConfirm){
 function openAdminLogin(){
   adminPassword.value = '';
   adminOverlay.classList.add('open');
-  setTimeout(() => adminPassword.focus(), 50);
+  adminPassword.focus();
 }
 
 function closeAdminLogin(){
