@@ -9,7 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="병무청 전화번호부">
 <link rel="manifest" href="./manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%235B9FFF' width='192' height='192'/><text x='96' y='120' font-size='100' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>📇</text></svg>">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-180.png">
 <title>부산울산지방병무청 전화번호부</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -230,6 +231,8 @@
     font-weight:700;
     color:var(--primary);
     margin-bottom:6px;
+    text-decoration:none;
+    display:block;
   }
   .card .name-row{
     display:flex;
@@ -271,14 +274,12 @@
     font-size:0.8rem;
     color:var(--ink-soft);
   }
-  .card a.phone-link{
-    color:var(--ink);
+  .card .dept-side{
+    color:var(--ink-soft);
     background:transparent;
-    text-decoration:none;
     font-weight:600;
-    font-size:19px;
+    font-size:15px;
     padding:0;
-    border-radius:0;
     white-space:nowrap;
     flex-shrink:0;
     align-self:center;
@@ -537,7 +538,7 @@
 
   <div class="utility-row">
     <button id="browseToggle">과별로 보기</button>
-    <button id="archiveToggle">아카이브</button>
+    <button id="archiveToggle" style="display:none;">아카이브</button>
     <button id="openAdd" class="primary" style="display:none;">+ 연락처 추가</button>
   </div>
 
@@ -987,7 +988,7 @@ function render(){
   updateWrapState();
   renderTabs();
   browseToggle.textContent = browseMode ? '과별 보기 닫기' : '과별로 보기';
-  archiveToggle.style.display = adminMode ? 'none' : '';
+  archiveToggle.style.display = 'none'; // 아카이브 기능 임시 비활성화
   openAddBtn.style.display = adminMode ? '' : 'none';
   adminFooter.style.display = isActiveView() ? 'none' : '';
 
@@ -1051,13 +1052,13 @@ function renderCards(list){
     const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
     card.innerHTML = `
       <div class="info">
-        <div class="dept">${escapeHtml(c.dept)}</div>
+        <a class="dept" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
         <div class="name-row">
           <span class="name">${escapeHtml(c.name)}</span>
           ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
         </div>
       </div>
-      <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
+      <div class="dept-side">${escapeHtml(c.dept)}</div>
     `;
     if(adminMode && !archiveDate){
       attachSwipe(card, c);
