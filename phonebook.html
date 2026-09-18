@@ -221,30 +221,35 @@
     padding:14px 16px;
     margin-bottom:8px;
     display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .card .row1{
+    display:flex;
     justify-content:space-between;
-    align-items:flex-start;
+    align-items:baseline;
     gap:10px;
   }
-  .card .info{ min-width:0; flex:1; }
   .card .dept{
     font-size:19px;
     font-weight:700;
     color:var(--primary);
-    margin-bottom:6px;
-    text-decoration:none;
-    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
-  .card .name-row{
+  .card .row2{
     display:flex;
     align-items:center;
-    gap:7px;
-    flex-wrap:wrap;
+    gap:8px;
   }
   .card .name{
     font-weight:600;
     font-size:18px;
     color:var(--ink);
     white-space:nowrap;
+    flex-shrink:0;
   }
   .card .duty{
     font-size:13px;
@@ -254,7 +259,10 @@
     padding:5px 11px;
     border-radius:12px;
     white-space:nowrap;
-    flex-shrink:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    min-width:0;
+    flex:1;
   }
   .new-badge{
     display:inline-flex;
@@ -274,15 +282,15 @@
     font-size:0.8rem;
     color:var(--ink-soft);
   }
-  .card .dept-side{
-    color:var(--ink-soft);
+  .card a.phone-link{
+    color:var(--ink);
     background:transparent;
-    font-weight:600;
-    font-size:15px;
+    text-decoration:none;
+    font-weight:700;
+    font-size:19px;
     padding:0;
     white-space:nowrap;
     flex-shrink:0;
-    align-self:center;
   }
   .card-actions{ display:none; }
 
@@ -1051,14 +1059,14 @@ function renderCards(list){
     const isNew = c.updatedAt && (Date.now() - c.updatedAt) < NEW_THRESHOLD_MS;
     const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
     card.innerHTML = `
-      <div class="info">
-        <a class="dept" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
-        <div class="name-row">
-          <span class="name">${escapeHtml(c.name)}</span>
-          ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
-        </div>
+      <div class="row1">
+        <span class="dept">${escapeHtml(c.dept)}</span>
+        <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
       </div>
-      <div class="dept-side">${escapeHtml(c.dept)}</div>
+      <div class="row2">
+        <span class="name">${escapeHtml(c.name)}</span>
+        ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
+      </div>
     `;
     if(adminMode && !archiveDate){
       attachSwipe(card, c);
