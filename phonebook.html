@@ -241,7 +241,7 @@
   }
   .card .row2{
     display:flex;
-    align-items:center;
+    align-items:flex-start;
     gap:8px;
   }
   .card .name{
@@ -250,6 +250,7 @@
     color:var(--ink);
     white-space:nowrap;
     flex-shrink:0;
+    padding-top:4px;
   }
   .card .duty{
     font-size:13px;
@@ -258,9 +259,9 @@
     background:var(--bg-card);
     padding:5px 11px;
     border-radius:12px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    white-space:normal;
+    word-break:keep-all;
+    overflow-wrap:break-word;
     min-width:0;
     flex:1;
   }
