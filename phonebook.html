@@ -196,6 +196,25 @@
     outline-offset:2px;
   }
 
+  .browse-exit-fixed{
+    position:fixed;
+    left:50%;
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    z-index:9;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.9rem;
+    font-weight:700;
+    padding:13px 26px;
+    border-radius:24px;
+    border:none;
+    background:var(--ink);
+    color:var(--bg);
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  }
+  .browse-exit-fixed:active{ transform:translateX(-50%) scale(0.96); }
+
   .tabs{
     display:flex;
     gap:8px;
@@ -589,6 +608,8 @@
   <div id="listArea"></div>
 </div>
 
+<button id="browseExitFixed" class="browse-exit-fixed" style="display:none;">과별 보기 닫기</button>
+
 <div class="admin-footer">
   <button id="adminToggle">관리자 모드로 들어가기</button>
 </div>
@@ -899,6 +920,7 @@ const listArea = document.getElementById('listArea');
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
 const browseToggle = document.getElementById('browseToggle');
+const browseExitFixed = document.getElementById('browseExitFixed');
 const openAddBtn = document.getElementById('openAdd');
 const adminToggle = document.getElementById('adminToggle');
 const adminFooter = document.querySelector('.admin-footer');
@@ -1031,6 +1053,8 @@ function render(){
   updateWrapState();
   renderTabs();
   browseToggle.textContent = browseMode ? '과별 보기 닫기' : '과별로 보기';
+  browseToggle.style.display = browseMode ? 'none' : '';
+  browseExitFixed.style.display = browseMode ? '' : 'none';
   archiveToggle.style.display = 'none'; // 아카이브 기능 임시 비활성화
   openAddBtn.style.display = adminMode ? '' : 'none';
   adminFooter.style.display = isActiveView() ? 'none' : '';
@@ -1242,6 +1266,11 @@ searchClear.addEventListener('click', () => {
 browseToggle.addEventListener('click', () => {
   browseMode = !browseMode;
   if(browseMode) activeTab = '전체';
+  render();
+});
+
+browseExitFixed.addEventListener('click', () => {
+  browseMode = false;
   render();
 });
 
