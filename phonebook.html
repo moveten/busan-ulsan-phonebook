@@ -221,14 +221,16 @@
     padding:14px 16px;
     margin-bottom:8px;
     display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:12px;
+  }
+  .card .left{
+    flex:1;
+    min-width:0;
+    display:flex;
     flex-direction:column;
     gap:6px;
-  }
-  .card .row1{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    gap:10px;
   }
   .card .dept{
     font-size:19px;
@@ -283,6 +285,14 @@
     font-size:0.8rem;
     color:var(--ink-soft);
   }
+  .card .phone-col{
+    flex-shrink:0;
+    align-self:stretch;
+    display:flex;
+    align-items:center;
+    padding-left:12px;
+    border-left:1px solid var(--border-soft);
+  }
   .card a.phone-link{
     color:var(--ink);
     background:transparent;
@@ -291,7 +301,6 @@
     font-size:19px;
     padding:0;
     white-space:nowrap;
-    flex-shrink:0;
   }
   .card-actions{ display:none; }
 
@@ -1060,13 +1069,15 @@ function renderCards(list){
     const isNew = c.updatedAt && (Date.now() - c.updatedAt) < NEW_THRESHOLD_MS;
     const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
     card.innerHTML = `
-      <div class="row1">
+      <div class="left">
         <span class="dept">${escapeHtml(c.dept)}</span>
-        <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
+        <div class="row2">
+          <span class="name">${escapeHtml(c.name)}</span>
+          ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
+        </div>
       </div>
-      <div class="row2">
-        <span class="name">${escapeHtml(c.name)}</span>
-        ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
+      <div class="phone-col">
+        <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
       </div>
     `;
     if(adminMode && !archiveDate){
@@ -1270,7 +1281,7 @@ function closeAdminLogin(){
 }
 
 function tryAdminLogin(){
-  if(adminPassword.value === '123!'){
+  if(adminPassword.value === '1114!'){
     adminMode = true;
     adminWorkingDate = todayStr();
     archiveDate = null;
