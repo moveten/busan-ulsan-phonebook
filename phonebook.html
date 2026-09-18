@@ -250,42 +250,38 @@
     min-width:0;
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:4px;
   }
-  .card .dept{
-    font-size:19px;
-    font-weight:700;
-    color:var(--primary);
-    min-width:0;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .card .row2{
+  .card .name-row{
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     gap:8px;
+    flex-wrap:wrap;
   }
   .card .name{
     font-weight:600;
-    font-size:18px;
+    font-size:17px;
     color:var(--ink);
     white-space:nowrap;
+  }
+  .card .dept{
+    font-size:12px;
+    font-weight:800;
+    color:var(--primary);
+    background:var(--primary-soft);
+    padding:3px 10px;
+    border-radius:8px;
+    white-space:nowrap;
     flex-shrink:0;
-    padding-top:4px;
   }
   .card .duty{
-    font-size:13px;
-    font-weight:600;
+    font-size:12.5px;
+    font-weight:500;
     color:var(--ink-soft);
-    background:var(--bg-card);
-    padding:5px 11px;
-    border-radius:12px;
+    line-height:1.5;
     white-space:normal;
     word-break:keep-all;
     overflow-wrap:break-word;
-    min-width:0;
-    flex:1;
   }
   .new-badge{
     display:inline-flex;
@@ -1099,11 +1095,11 @@ function renderCards(list){
     const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
     card.innerHTML = `
       <div class="left">
-        <span class="dept">${escapeHtml(c.dept)}</span>
-        <div class="row2">
+        <div class="name-row">
           <span class="name">${escapeHtml(c.name)}</span>
-          ${c.duty ? `<span class="duty">${escapeHtml(c.duty)}</span>` : ''}
+          <span class="dept">${escapeHtml(c.dept)}</span>
         </div>
+        ${c.duty ? `<div class="duty">${escapeHtml(c.duty)}</div>` : ''}
       </div>
       <div class="phone-col">
         <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
