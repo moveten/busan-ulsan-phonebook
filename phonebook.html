@@ -240,6 +240,15 @@
     background:var(--primary);
     border-color:var(--primary);
   }
+  .tab-transfer{
+    color:var(--coral);
+    border-color:var(--coral);
+  }
+  .tab-transfer.active{
+    background:var(--coral);
+    border-color:var(--coral);
+    color:#fff;
+  }
   .tab:focus-visible{
     outline:2px solid var(--primary);
     outline-offset:2px;
@@ -292,6 +301,25 @@
     border-radius:8px;
     white-space:nowrap;
     flex-shrink:0;
+  }
+  .change-badge{
+    font-family:inherit;
+    font-size:11px;
+    font-weight:800;
+    border:none;
+    border-radius:8px;
+    padding:3px 9px;
+    white-space:nowrap;
+    flex-shrink:0;
+    cursor:pointer;
+  }
+  .change-transfer{
+    background:var(--coral);
+    color:#fff;
+  }
+  .change-duty{
+    background:var(--mint);
+    color:#0A2E28;
   }
   .card .duty{
     font-size:12.5px;
@@ -397,6 +425,11 @@
     font-size:0.85rem;
     font-weight:600;
   }
+  .archive-banner-actions{
+    display:flex;
+    gap:8px;
+    flex-shrink:0;
+  }
   .archive-banner button{
     background:var(--primary);
     color:#fff;
@@ -408,6 +441,11 @@
     cursor:pointer;
     font-family:inherit;
     flex-shrink:0;
+  }
+  .archive-banner #archiveExit{
+    background:transparent;
+    color:var(--primary-deep);
+    border:1.5px solid var(--primary);
   }
 
   .admin-bar{
@@ -460,6 +498,35 @@
     font-weight:500;
     color:var(--ink-soft);
     margin-top:2px;
+  }
+  .archive-item.today{ border-color:var(--primary); background:var(--primary-soft); }
+  .year-chips{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:10px;
+    margin-bottom:6px;
+  }
+  .year-chip{
+    flex-shrink:0;
+    font-family:inherit;
+    cursor:pointer;
+    border:1.5px solid var(--line);
+    background:var(--bg);
+    color:var(--ink-soft);
+    font-size:0.85rem;
+    font-weight:700;
+    padding:8px 16px;
+    border-radius:12px;
+  }
+  .year-chip.active{
+    border-color:var(--primary);
+    background:var(--primary);
+    color:#fff;
+  }
+  .archive-date-list{
+    max-height:320px;
+    overflow-y:auto;
   }
   .archive-empty{
     color:var(--ink-soft);
@@ -593,10 +660,12 @@
     <button type="button" id="searchClear" class="clear-btn" aria-label="검색어 지우기">✕</button>
   </div>
 
-  <div class="archive-banner" id="archiveBanner" style="display:none;">
+  <div class="archive-banner" id="archiveBanner">
     <span id="archiveBannerText"></span>
-    <button id="archiveDateChange">날짜 변경</button>
-    <button id="archiveExit">돌아가기</button>
+    <div class="archive-banner-actions">
+      <button id="archiveDateChange">변경</button>
+      <button id="archiveExit" style="display:none;">오늘로</button>
+    </div>
   </div>
 
   <div class="admin-bar" id="adminBar" style="display:none;">
@@ -647,7 +716,8 @@
 
 <div class="overlay" id="archiveOverlay">
   <div class="modal small">
-    <h2 id="archiveModalTitle">아카이브</h2>
+    <h2 id="archiveModalTitle">기준일 변경</h2>
+    <div class="year-chips" id="yearChips"></div>
     <div id="archiveList"></div>
     <div class="modal-actions">
       <button id="archiveCancel">닫기</button>
@@ -892,6 +962,11 @@ function formatDateLabel(dateStr){
   return dateStr === todayStr() ? `${label} (오늘, 진행 중)` : label;
 }
 
+function formatRefDate(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return `${y}. ${m}. ${d}.`;
+}
+
 function loadArchive(){
   try{
     const raw = localStorage.getItem(ARCHIVE_KEY);
@@ -942,6 +1017,7 @@ const archiveToggle = document.getElementById('archiveToggle');
 const archiveOverlay = document.getElementById('archiveOverlay');
 const archiveModalTitle = document.getElementById('archiveModalTitle');
 const archiveList = document.getElementById('archiveList');
+const yearChips = document.getElementById('yearChips');
 const archiveBanner = document.getElementById('archiveBanner');
 const archiveBannerText = document.getElementById('archiveBannerText');
 const archiveExit = document.getElementById('archiveExit');
@@ -964,8 +1040,15 @@ function showToast(msg){
 }
 
 function getDepartments(list){
-  const set = new Set((list||contacts).map(c => c.dept).filter(Boolean));
-  return Array.from(set).sort((a,b)=>a.localeCompare(b,'ko'));
+  const seen = new Set();
+  const order = [];
+  (list||contacts).forEach(c => {
+    if(c.dept && !seen.has(c.dept)){
+      seen.add(c.dept);
+      order.push(c.dept);
+    }
+  });
+  return order;
 }
 
 function getWorkingList(){
@@ -1009,6 +1092,34 @@ function updateWrapState(){
   wrapEl.classList.toggle('active', isActiveView());
 }
 
+function getPreviousArchiveDate(refDate){
+  const arc = loadArchive();
+  const dates = Object.keys(arc).filter(d => d < refDate).sort((a,b)=> b.localeCompare(a));
+  return dates[0] || null;
+}
+
+function getChangedPeople(){
+  const refDate = archiveDate || todayStr();
+  const prevDate = getPreviousArchiveDate(refDate);
+  if(!prevDate) return [];
+  const arc = loadArchive();
+  const prevList = arc[prevDate] || [];
+  const currList = effectiveContacts();
+  const prevMap = {};
+  prevList.forEach(p => { prevMap[p.id] = p; });
+  const changed = [];
+  currList.forEach(c => {
+    const prev = prevMap[c.id];
+    if(!prev) return;
+    if(prev.dept !== c.dept){
+      changed.push({...c, changeType:'transfer', fromDept: prev.dept, toDept: c.dept});
+    }else if((prev.duty||'') !== (c.duty||'')){
+      changed.push({...c, changeType:'duty', fromDuty: prev.duty||'(없음)', toDuty: c.duty||'(없음)'});
+    }
+  });
+  return changed;
+}
+
 function renderTabs(){
   if(!browseMode){
     tabsEl.style.display = 'none';
@@ -1017,12 +1128,20 @@ function renderTabs(){
   }
   tabsEl.style.display = 'flex';
   const depts = getDepartments(effectiveContacts());
+  const transferCount = getChangedPeople().filter(c => c.changeType === 'transfer').length;
   tabsEl.innerHTML = '';
   const allBtn = document.createElement('button');
   allBtn.className = 'tab' + (activeTab === '전체' ? ' active' : '');
   allBtn.textContent = '전체';
   allBtn.onclick = () => { activeTab = '전체'; render(); };
   tabsEl.appendChild(allBtn);
+  if(transferCount > 0){
+    const moveBtn = document.createElement('button');
+    moveBtn.className = 'tab tab-transfer' + (activeTab === '인사이동자' ? ' active' : '');
+    moveBtn.textContent = `인사이동자 ${transferCount}`;
+    moveBtn.onclick = () => { activeTab = '인사이동자'; render(); };
+    tabsEl.appendChild(moveBtn);
+  }
   depts.forEach(d => {
     const b = document.createElement('button');
     b.className = 'tab' + (activeTab === d ? ' active' : '');
@@ -1081,9 +1200,11 @@ function render(){
     adminDateChip.textContent = '📅 ' + chipLabel(adminWorkingDate);
   }
 
-  if(archiveDate && !adminMode){
+  if(!adminMode){
     archiveBanner.style.display = 'flex';
-    archiveBannerText.textContent = formatDateLabel(archiveDate) + ' 기록 보기 중';
+    const refDate = archiveDate || todayStr();
+    archiveBannerText.textContent = '기준일 : ' + formatRefDate(refDate);
+    archiveExit.style.display = archiveDate ? '' : 'none';
   }else{
     archiveBanner.style.display = 'none';
   }
@@ -1096,7 +1217,13 @@ function render(){
 
   const sourceList = effectiveContacts();
   let filtered = sourceList.filter(c => matchesSearch(c, searchTerm));
-  if(browseMode && activeTab !== '전체'){
+
+  const changedMap = {};
+  getChangedPeople().forEach(c => { changedMap[c.id] = c; });
+
+  if(browseMode && activeTab === '인사이동자'){
+    filtered = filtered.filter(c => changedMap[c.id] && changedMap[c.id].changeType === 'transfer');
+  }else if(browseMode && activeTab !== '전체'){
     filtered = filtered.filter(c => c.dept === activeTab);
   }
 
@@ -1107,7 +1234,7 @@ function render(){
 
   const groupByDept = browseMode && activeTab === '전체';
   if(!groupByDept){
-    listArea.appendChild(renderCards(filtered));
+    listArea.appendChild(renderCards(filtered, changedMap));
     return;
   }
 
@@ -1117,28 +1244,38 @@ function render(){
     if(!groups[key]) groups[key] = [];
     groups[key].push(c);
   });
-  const deptKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+  const deptKeys = getDepartments(filtered);
+  if(groups['미지정']) deptKeys.push('미지정');
   deptKeys.forEach(dept => {
     const label = document.createElement('div');
     label.className = 'section-label';
     label.textContent = dept;
     listArea.appendChild(label);
-    listArea.appendChild(renderCards(groups[dept]));
+    listArea.appendChild(renderCards(groups[dept], changedMap));
   });
 }
 
-function renderCards(list){
+function renderCards(list, changedMap){
+  changedMap = changedMap || {};
   const frag = document.createDocumentFragment();
   list.forEach(c => {
     const card = document.createElement('div');
     card.className = 'card';
     const isNew = c.updatedAt && (Date.now() - c.updatedAt) < NEW_THRESHOLD_MS;
     const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
+    const change = changedMap[c.id];
+    let changeBadge = '';
+    if(change && change.changeType === 'transfer'){
+      changeBadge = `<button type="button" class="change-badge change-transfer" data-id="${escapeAttr(c.id)}">이동됨</button>`;
+    }else if(change && change.changeType === 'duty'){
+      changeBadge = `<button type="button" class="change-badge change-duty" data-id="${escapeAttr(c.id)}">업무변경</button>`;
+    }
     card.innerHTML = `
       <div class="left">
         <div class="name-row">
           <span class="name">${highlightMatch(c.name, searchTerm.trim())}</span>
           <span class="dept">${escapeHtml(c.dept)}</span>
+          ${changeBadge}
         </div>
         ${c.duty ? `<div class="duty">${highlightMatch(c.duty, searchTerm.trim())}</div>` : ''}
       </div>
@@ -1146,12 +1283,57 @@ function renderCards(list){
         <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
       </div>
     `;
+    if(change){
+      const badgeEl = card.querySelector('.change-badge');
+      if(badgeEl){
+        badgeEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if(change.changeType === 'transfer'){
+            showToast(`${change.fromDept} → ${change.toDept}로 이동`);
+          }else{
+            showToast(`업무 변경: ${change.fromDuty} → ${change.toDuty}`);
+          }
+        });
+      }
+    }
     if(adminMode && !archiveDate){
       attachSwipe(card, c);
     }
     frag.appendChild(card);
   });
   return frag;
+}
+
+function attachTabSwipe(){
+  let startX = 0, startY = 0, dragging = false;
+  const THRESHOLD = 70;
+
+  listArea.addEventListener('pointerdown', (e) => {
+    if(!browseMode || activeTab === '전체') return;
+    if(e.target.closest('.card')) return; // 카드 자체 스와이프(수정/삭제)와 겹치지 않도록
+    startX = e.clientX; startY = e.clientY; dragging = true;
+  });
+  listArea.addEventListener('pointerup', (e) => {
+    if(!dragging) return;
+    dragging = false;
+    if(!browseMode || activeTab === '전체') return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if(Math.abs(dy) > 60 || Math.abs(dx) < THRESHOLD) return;
+    const depts = getDepartments(effectiveContacts());
+    const specialTabs = getChangedPeople().length ? ['인사이동자'] : [];
+    const allTabs = [...specialTabs, ...depts];
+    const idx = allTabs.indexOf(activeTab);
+    if(idx === -1) return;
+    if(dx < 0 && idx < allTabs.length - 1){
+      activeTab = allTabs[idx + 1];
+      render();
+    }else if(dx > 0 && idx > 0){
+      activeTab = allTabs[idx - 1];
+      render();
+    }
+  });
+  listArea.addEventListener('pointercancel', () => { dragging = false; });
 }
 
 function attachSwipe(card, contact){
@@ -1292,35 +1474,72 @@ browseExitFixed.addEventListener('click', () => {
 });
 
 function openDatePicker(mode){
-  archiveModalTitle.textContent = mode === 'admin' ? '작업할 날짜 선택' : '아카이브';
+  archiveModalTitle.textContent = mode === 'admin' ? '작업할 날짜 선택' : '기준일 변경';
   const arc = loadArchive();
+  if(!arc[todayStr()]) arc[todayStr()] = contacts; // 오늘 항목이 없으면 현재 데이터로 보정
   const dates = Object.keys(arc).sort((a,b)=> b.localeCompare(a));
-  archiveList.innerHTML = '';
+
   if(dates.length === 0){
-    archiveList.innerHTML = '<div class="archive-empty">아직 저장된 이전 기록이 없습니다.<br>연락처가 수정되면 날짜별로 자동 저장됩니다.</div>';
-  }else{
-    dates.forEach(d => {
+    yearChips.innerHTML = '';
+    archiveList.innerHTML = '<div class="archive-empty">아직 저장된 기록이 없습니다.<br>연락처가 수정되면 날짜별로 자동 저장됩니다.</div>';
+    archiveOverlay.classList.add('open');
+    return;
+  }
+
+  const byYear = {};
+  dates.forEach(d => {
+    const y = d.slice(0,4);
+    (byYear[y] = byYear[y] || []).push(d);
+  });
+  const years = Object.keys(byYear).sort((a,b)=> b.localeCompare(a));
+  const currentRef = mode === 'admin' ? (adminWorkingDate || todayStr()) : (archiveDate || todayStr());
+  let selectedYear = years.includes(currentRef.slice(0,4)) ? currentRef.slice(0,4) : years[0];
+
+  function selectDate(d){
+    if(mode === 'admin'){
+      adminWorkingDate = d;
+    }else{
+      archiveDate = (d === todayStr()) ? null : d;
+      searchTerm = '';
+      searchInput.value = '';
+      searchClear.classList.remove('show');
+      browseMode = false;
+      activeTab = '전체';
+    }
+    archiveOverlay.classList.remove('open');
+    render();
+  }
+
+  function renderDateList(){
+    archiveList.innerHTML = '';
+    const listWrap = document.createElement('div');
+    listWrap.className = 'archive-date-list';
+    byYear[selectedYear].forEach(d => {
       const btn = document.createElement('button');
-      btn.className = 'archive-item';
+      btn.className = 'archive-item' + (d === currentRef ? ' today' : '');
       const count = (arc[d]||[]).length;
       btn.innerHTML = `${escapeHtml(formatDateLabel(d))}<span class="archive-item-sub">${count}건 저장됨</span>`;
-      btn.onclick = () => {
-        if(mode === 'admin'){
-          adminWorkingDate = d;
-        }else{
-          archiveDate = d;
-          searchTerm = '';
-          searchInput.value = '';
-          searchClear.classList.remove('show');
-          browseMode = false;
-          activeTab = '전체';
-        }
-        archiveOverlay.classList.remove('open');
-        render();
-      };
-      archiveList.appendChild(btn);
+      btn.onclick = () => selectDate(d);
+      listWrap.appendChild(btn);
     });
+    archiveList.appendChild(listWrap);
   }
+
+  yearChips.innerHTML = '';
+  years.forEach(y => {
+    const chip = document.createElement('button');
+    chip.className = 'year-chip' + (y === selectedYear ? ' active' : '');
+    chip.textContent = y + '년';
+    chip.onclick = () => {
+      selectedYear = y;
+      yearChips.querySelectorAll('.year-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderDateList();
+    };
+    yearChips.appendChild(chip);
+  });
+
+  renderDateList();
   archiveOverlay.classList.add('open');
 }
 
@@ -1393,6 +1612,7 @@ document.getElementById('cancelBtn').onclick = closeModal;
 document.getElementById('saveBtn').onclick = saveContact;
 overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
 
+attachTabSwipe();
 render();
 
 // PWA Service Worker 등록
