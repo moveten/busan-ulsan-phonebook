@@ -539,11 +539,11 @@
     padding:9px 14px;
   }
   #adminDateChip{
-    background:var(--mint);
-    color:#0A2E28;
+    background:var(--primary);
+    color:#fff;
   }
   #promoteBaseDate{
-    background:var(--coral);
+    background:var(--primary);
     color:#fff;
   }
 
@@ -636,19 +636,19 @@
     padding:12px 10px;
   }
   #mgrEditBtn{ background:var(--primary); color:#fff; }
-  #mgrAddBtn{ background:var(--mint); color:#0A2E28; }
+  #mgrAddBtn{ background:transparent; color:var(--ink); border:1.5px solid var(--line); }
   #mgrDeleteBtn{ background:var(--danger); color:#fff; }
   .add-date-back{
     font-family:inherit;
     cursor:pointer;
-    border:none;
-    background:none;
-    color:var(--ink-soft);
+    border:1.5px solid var(--line);
+    background:transparent;
+    color:var(--ink);
     font-size:0.85rem;
     font-weight:700;
-    padding:0 0 14px;
-    text-decoration:underline;
-    text-underline-offset:3px;
+    padding:9px 16px;
+    border-radius:10px;
+    margin-bottom:16px;
   }
   .add-date-options .field{ margin-bottom:8px; }
   .add-date-options .field input[type="date"]{
@@ -690,17 +690,13 @@
     cursor:pointer;
     border:none;
     border-radius:10px;
-    background:var(--mint);
-    color:#0A2E28;
+    background:var(--primary);
+    color:#fff;
     font-weight:700;
     font-size:0.88rem;
     padding:11px 16px;
   }
   .add-date-option button:disabled{ opacity:0.6; cursor:default; }
-  #addDateManualBtn{
-    background:var(--primary);
-    color:#fff;
-  }
   .add-date-divider{
     text-align:center;
     font-size:0.78rem;
@@ -951,7 +947,7 @@
     <div class="pdf-review-hint">자동으로 추출한 내용입니다. 틀린 부분을 고친 뒤 저장하세요.</div>
     <div class="pdf-review-list" id="pdfReviewList"></div>
     <div class="modal-actions">
-      <button id="pdfReviewCancel">취소</button>
+      <button id="pdfReviewCancel">뒤로가기</button>
       <button class="primary" id="pdfReviewSave">이 데이터로 저장</button>
     </div>
   </div>
@@ -1985,7 +1981,7 @@ function buildAddDateSection(){
         showToast('전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
       }else{
         archiveOverlay.classList.remove('open');
-        openPdfReview(val, rows);
+        openPdfReview(val, rows, () => openDatePicker('admin'));
       }
     }catch(e){
       showToast('파일을 읽는 중 오류가 발생했습니다');
@@ -2094,7 +2090,7 @@ function parseLineToContact(line){
   return { id: 'r' + Math.random().toString(36).slice(2, 9), dept, name, duty, phone, note: '' };
 }
 
-function openPdfReview(dateVal, rows){
+function openPdfReview(dateVal, rows, onCancel){
   pdfReviewTitle.textContent = formatRefDate(dateVal) + ' — PDF 인식 결과 검토';
   const state = rows.map(r => ({...r}));
 
@@ -2135,6 +2131,7 @@ function openPdfReview(dateVal, rows){
 
   newCancelBtn.addEventListener('click', () => {
     pdfReviewOverlay.classList.remove('open');
+    if(onCancel) onCancel();
   });
   newSaveBtn.addEventListener('click', () => {
     const cleaned = state
