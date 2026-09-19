@@ -69,10 +69,18 @@
     font-family:"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
     line-height:1.5;
   }
+  body.modal-open{
+    overflow:hidden;
+    height:100%;
+  }
+  html:has(body.modal-open){
+    overflow:hidden;
+    height:100%;
+  }
   .wrap{
     max-width:600px;
     margin:0 auto;
-    padding:16vh 20px 60px;
+    padding:16vh 20px 100px;
     min-height:100vh;
     transition:padding 0.25s ease;
   }
@@ -199,7 +207,7 @@
   .browse-exit-fixed{
     position:fixed;
     left:50%;
-    bottom:calc(18px + env(safe-area-inset-bottom));
+    bottom:calc(66px + env(safe-area-inset-bottom));
     transform:translateX(-50%);
     z-index:9;
     cursor:pointer;
@@ -381,7 +389,7 @@
     position:fixed;
     left:0;
     right:0;
-    bottom:14px;
+    bottom:58px;
     display:flex;
     justify-content:center;
     padding:14px 20px calc(14px + env(safe-area-inset-bottom));
@@ -413,15 +421,19 @@
   }
 
   .archive-banner{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:8;
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:10px;
-    background:var(--primary-soft);
-    color:var(--primary-deep);
-    border-radius:14px;
-    padding:12px 14px;
-    margin-top:14px;
+    background:var(--surface);
+    color:var(--ink);
+    border-top:1px solid var(--border-soft);
+    padding:12px 18px calc(12px + env(safe-area-inset-bottom));
     font-size:0.85rem;
     font-weight:600;
   }
@@ -444,8 +456,8 @@
   }
   .archive-banner #archiveExit{
     background:transparent;
-    color:var(--primary-deep);
-    border:1.5px solid var(--primary);
+    color:var(--ink);
+    border:1.5px solid var(--line);
   }
 
   .admin-bar{
@@ -671,7 +683,7 @@
 
   .toast{
     position:fixed;
-    bottom:22px;
+    bottom:calc(70px + env(safe-area-inset-bottom));
     left:50%;
     transform:translateX(-50%);
     background:var(--ink);
@@ -700,14 +712,6 @@
     <button type="button" id="searchClear" class="clear-btn" aria-label="검색어 지우기">✕</button>
   </div>
 
-  <div class="archive-banner" id="archiveBanner">
-    <span id="archiveBannerText"></span>
-    <div class="archive-banner-actions">
-      <button id="archiveDateChange">변경</button>
-      <button id="archiveExit" style="display:none;">기준일로</button>
-    </div>
-  </div>
-
   <div class="admin-bar" id="adminBar" style="display:none;">
     <div class="admin-bar-left">
       <button id="adminDateChip">📅 기준일</button>
@@ -731,6 +735,14 @@
 
 <div class="admin-footer">
   <button id="adminToggle">관리자 모드로 들어가기</button>
+</div>
+
+<div class="archive-banner" id="archiveBanner">
+  <span id="archiveBannerText"></span>
+  <div class="archive-banner-actions">
+    <button id="archiveDateChange">변경</button>
+    <button id="archiveExit" style="display:none;">기준일로</button>
+  </div>
 </div>
 
 <div class="overlay" id="adminOverlay">
@@ -1716,6 +1728,15 @@ document.getElementById('openAdd').onclick = openAdd;
 document.getElementById('cancelBtn').onclick = closeModal;
 document.getElementById('saveBtn').onclick = saveContact;
 overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
+
+function syncModalScrollLock(){
+  const anyOpen = !!document.querySelector('.overlay.open');
+  document.body.classList.toggle('modal-open', anyOpen);
+}
+document.querySelectorAll('.overlay').forEach(el => {
+  new MutationObserver(syncModalScrollLock).observe(el, { attributes:true, attributeFilter:['class'] });
+});
+syncModalScrollLock();
 
 attachTabSwipe();
 render();
