@@ -454,6 +454,13 @@
     justify-content:space-between;
     gap:10px;
     margin-top:14px;
+    flex-wrap:wrap;
+  }
+  .admin-bar-left{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
   }
   .admin-bar button{
     font-family:inherit;
@@ -467,6 +474,10 @@
   #adminDateChip{
     background:var(--mint);
     color:#0A2E28;
+  }
+  #promoteBaseDate{
+    background:var(--coral);
+    color:#fff;
   }
   #adminExit{
     background:transparent;
@@ -527,6 +538,35 @@
   .archive-date-list{
     max-height:320px;
     overflow-y:auto;
+  }
+  .new-date-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .new-date-row input[type="date"]{
+    flex:1;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:0.9rem;
+  }
+  .new-date-row button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    background:var(--primary);
+    color:#fff;
+    font-weight:700;
+    font-size:0.88rem;
+    padding:10px 16px;
+    flex-shrink:0;
   }
   .archive-empty{
     color:var(--ink-soft);
@@ -664,12 +704,15 @@
     <span id="archiveBannerText"></span>
     <div class="archive-banner-actions">
       <button id="archiveDateChange">변경</button>
-      <button id="archiveExit" style="display:none;">오늘로</button>
+      <button id="archiveExit" style="display:none;">기준일로</button>
     </div>
   </div>
 
   <div class="admin-bar" id="adminBar" style="display:none;">
-    <button id="adminDateChip">📅 오늘</button>
+    <div class="admin-bar-left">
+      <button id="adminDateChip">📅 기준일</button>
+      <button id="promoteBaseDate" style="display:none;">이 날짜를 기준일로 지정</button>
+    </div>
     <button id="adminExit">관리자 모드 종료</button>
   </div>
 
@@ -765,6 +808,8 @@
 <script>
 const STORAGE_KEY = 'busan-ulsan-mma-contacts-v9';
 const ARCHIVE_KEY = 'busan-ulsan-mma-archive-v1';
+const BASE_DATE_KEY = 'busan-ulsan-mma-basedate-v1';
+const DEFAULT_BASE_DATE = '2026-09-07';
 const AVATAR_COLORS = ['#3B5BFF', '#00C2A8', '#FF8B6B', '#8A5CF6', '#2AB673'];
 const NEW_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000; // 3일 이내 변경분을 "새로 변경됨"으로 표시
 
@@ -959,7 +1004,7 @@ function todayStr(){
 function formatDateLabel(dateStr){
   const [y,m,d] = dateStr.split('-').map(Number);
   const label = `${y}년 ${m}월 ${d}일`;
-  return dateStr === todayStr() ? `${label} (오늘, 진행 중)` : label;
+  return dateStr === baseDate ? `${label} (현재 기준일)` : label;
 }
 
 function formatRefDate(dateStr){
@@ -977,18 +1022,35 @@ function loadArchive(){
   }
 }
 
-function snapshotToday(list){
+function loadBaseDate(){
+  try{
+    return localStorage.getItem(BASE_DATE_KEY) || DEFAULT_BASE_DATE;
+  }catch(e){
+    return DEFAULT_BASE_DATE;
+  }
+}
+
+function saveBaseDate(d){
+  try{
+    localStorage.setItem(BASE_DATE_KEY, d);
+  }catch(e){
+    // 저장 실패는 조용히 무시
+  }
+}
+
+function snapshotBase(list){
   try{
     const arc = loadArchive();
-    arc[todayStr()] = list;
+    arc[baseDate] = list;
     localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc));
   }catch(e){
     // 아카이브 저장 실패는 조용히 무시 (연락처 저장 자체는 이미 완료됨)
   }
 }
 
+let baseDate = loadBaseDate();
 let contacts = loadContacts();
-snapshotToday(contacts);
+snapshotBase(contacts);
 let activeTab = '전체';
 let searchTerm = '';
 let browseMode = false;
@@ -1010,6 +1072,7 @@ const adminOverlay = document.getElementById('adminOverlay');
 const adminPassword = document.getElementById('adminPassword');
 const adminBar = document.getElementById('adminBar');
 const adminDateChip = document.getElementById('adminDateChip');
+const promoteBaseDate = document.getElementById('promoteBaseDate');
 const adminExit = document.getElementById('adminExit');
 const confirmOverlay = document.getElementById('confirmOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
@@ -1052,15 +1115,16 @@ function getDepartments(list){
 }
 
 function getWorkingList(){
-  if(!adminWorkingDate || adminWorkingDate === todayStr()) return contacts;
+  if(!adminWorkingDate || adminWorkingDate === baseDate) return contacts;
   const arc = loadArchive();
   return arc[adminWorkingDate] || [];
 }
 
 function commitWorkingList(list){
-  if(!adminWorkingDate || adminWorkingDate === todayStr()){
+  if(!adminWorkingDate || adminWorkingDate === baseDate){
     contacts = list;
     saveContacts(contacts);
+    snapshotBase(contacts);
   }else{
     const arc = loadArchive();
     arc[adminWorkingDate] = list;
@@ -1070,7 +1134,7 @@ function commitWorkingList(list){
 }
 
 function chipLabel(dateStr){
-  if(!dateStr || dateStr === todayStr()) return '오늘';
+  if(!dateStr || dateStr === baseDate) return '기준일';
   const [,m,d] = dateStr.split('-').map(Number);
   return `${m}월 ${d}일`;
 }
@@ -1099,7 +1163,7 @@ function getPreviousArchiveDate(refDate){
 }
 
 function getChangedPeople(){
-  const refDate = archiveDate || todayStr();
+  const refDate = archiveDate || baseDate;
   const prevDate = getPreviousArchiveDate(refDate);
   if(!prevDate) return [];
   const arc = loadArchive();
@@ -1198,11 +1262,12 @@ function render(){
   adminBar.style.display = adminMode ? 'flex' : 'none';
   if(adminMode){
     adminDateChip.textContent = '📅 ' + chipLabel(adminWorkingDate);
+    promoteBaseDate.style.display = (adminWorkingDate && adminWorkingDate !== baseDate) ? '' : 'none';
   }
 
   if(!adminMode){
     archiveBanner.style.display = 'flex';
-    const refDate = archiveDate || todayStr();
+    const refDate = archiveDate || baseDate;
     archiveBannerText.textContent = '기준일 : ' + formatRefDate(refDate);
     archiveExit.style.display = archiveDate ? '' : 'none';
   }else{
@@ -1474,14 +1539,41 @@ browseExitFixed.addEventListener('click', () => {
 });
 
 function openDatePicker(mode){
-  archiveModalTitle.textContent = mode === 'admin' ? '작업할 날짜 선택' : '기준일 변경';
+  archiveModalTitle.textContent = mode === 'admin' ? '기준일 선택 / 추가' : '기준일 변경';
   const arc = loadArchive();
-  if(!arc[todayStr()]) arc[todayStr()] = contacts; // 오늘 항목이 없으면 현재 데이터로 보정
+  if(!arc[baseDate]) arc[baseDate] = contacts; // 기준일 항목이 없으면 현재 데이터로 보정
   const dates = Object.keys(arc).sort((a,b)=> b.localeCompare(a));
 
+  yearChips.innerHTML = '';
+  archiveList.innerHTML = '';
+
+  if(mode === 'admin'){
+    const addWrap = document.createElement('div');
+    addWrap.className = 'new-date-row';
+    addWrap.innerHTML = `
+      <input type="date" id="newDateInput">
+      <button id="newDateAdd">추가</button>
+    `;
+    archiveList.appendChild(addWrap);
+    addWrap.querySelector('#newDateAdd').onclick = () => {
+      const val = addWrap.querySelector('#newDateInput').value;
+      if(!val){ showToast('날짜를 선택해주세요'); return; }
+      if(!arc[val]){
+        arc[val] = JSON.parse(JSON.stringify(contacts)); // 현재 기준일 데이터를 복사해서 시작
+        try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
+        showToast(formatRefDate(val) + ' 데이터를 현재 기준일 복사본으로 새로 만들었습니다');
+      }
+      adminWorkingDate = val;
+      archiveOverlay.classList.remove('open');
+      render();
+    };
+  }
+
   if(dates.length === 0){
-    yearChips.innerHTML = '';
-    archiveList.innerHTML = '<div class="archive-empty">아직 저장된 기록이 없습니다.<br>연락처가 수정되면 날짜별로 자동 저장됩니다.</div>';
+    const empty = document.createElement('div');
+    empty.className = 'archive-empty';
+    empty.innerHTML = '아직 저장된 기록이 없습니다.<br>연락처가 수정되면 날짜별로 자동 저장됩니다.';
+    archiveList.appendChild(empty);
     archiveOverlay.classList.add('open');
     return;
   }
@@ -1492,14 +1584,14 @@ function openDatePicker(mode){
     (byYear[y] = byYear[y] || []).push(d);
   });
   const years = Object.keys(byYear).sort((a,b)=> b.localeCompare(a));
-  const currentRef = mode === 'admin' ? (adminWorkingDate || todayStr()) : (archiveDate || todayStr());
+  const currentRef = mode === 'admin' ? (adminWorkingDate || baseDate) : (archiveDate || baseDate);
   let selectedYear = years.includes(currentRef.slice(0,4)) ? currentRef.slice(0,4) : years[0];
 
   function selectDate(d){
     if(mode === 'admin'){
       adminWorkingDate = d;
     }else{
-      archiveDate = (d === todayStr()) ? null : d;
+      archiveDate = (d === baseDate) ? null : d;
       searchTerm = '';
       searchInput.value = '';
       searchClear.classList.remove('show');
@@ -1510,22 +1602,22 @@ function openDatePicker(mode){
     render();
   }
 
+  const dateListWrap = document.createElement('div');
+  dateListWrap.className = 'archive-date-list';
+  archiveList.appendChild(dateListWrap);
+
   function renderDateList(){
-    archiveList.innerHTML = '';
-    const listWrap = document.createElement('div');
-    listWrap.className = 'archive-date-list';
+    dateListWrap.innerHTML = '';
     byYear[selectedYear].forEach(d => {
       const btn = document.createElement('button');
       btn.className = 'archive-item' + (d === currentRef ? ' today' : '');
       const count = (arc[d]||[]).length;
       btn.innerHTML = `${escapeHtml(formatDateLabel(d))}<span class="archive-item-sub">${count}건 저장됨</span>`;
       btn.onclick = () => selectDate(d);
-      listWrap.appendChild(btn);
+      dateListWrap.appendChild(btn);
     });
-    archiveList.appendChild(listWrap);
   }
 
-  yearChips.innerHTML = '';
   years.forEach(y => {
     const chip = document.createElement('button');
     chip.className = 'year-chip' + (y === selectedYear ? ' active' : '');
@@ -1545,6 +1637,19 @@ function openDatePicker(mode){
 
 archiveToggle.addEventListener('click', () => openDatePicker('view'));
 adminDateChip.addEventListener('click', () => openDatePicker('admin'));
+promoteBaseDate.addEventListener('click', () => {
+  if(!adminWorkingDate || adminWorkingDate === baseDate) return;
+  showConfirm(`${formatDateLabel(adminWorkingDate)}를 새로운 기준일로 지정할까요? 이후 모든 사용자에게 이 날짜의 데이터가 기본으로 보여집니다.`, () => {
+    const arc = loadArchive();
+    baseDate = adminWorkingDate;
+    saveBaseDate(baseDate);
+    contacts = arc[baseDate] || [];
+    saveContacts(contacts);
+    adminWorkingDate = baseDate;
+    showToast(formatRefDate(baseDate) + '을(를) 기준일로 지정했습니다');
+    render();
+  });
+});
 document.getElementById('archiveCancel').addEventListener('click', () => archiveOverlay.classList.remove('open'));
 archiveOverlay.addEventListener('click', (e) => { if(e.target === archiveOverlay) archiveOverlay.classList.remove('open'); });
 archiveExit.addEventListener('click', () => {
@@ -1583,7 +1688,7 @@ function closeAdminLogin(){
 function tryAdminLogin(){
   if(adminPassword.value === '1114!'){
     adminMode = true;
-    adminWorkingDate = todayStr();
+    adminWorkingDate = baseDate;
     archiveDate = null;
     closeAdminLogin();
     showToast('관리자 모드입니다');
