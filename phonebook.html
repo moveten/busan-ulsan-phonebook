@@ -497,6 +497,11 @@
     gap:8px;
     flex-wrap:wrap;
   }
+  .admin-current-base{
+    font-size:0.78rem;
+    font-weight:700;
+    color:var(--ink-soft);
+  }
   .admin-bar button{
     font-family:inherit;
     cursor:pointer;
@@ -608,6 +613,79 @@
     font-size:0.88rem;
     text-align:center;
     padding:18px 4px;
+  }
+  .new-date-pdf-row{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:16px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--line);
+  }
+  .new-date-pdf-label{
+    font-size:0.8rem;
+    font-weight:700;
+    color:var(--ink-soft);
+  }
+  .new-date-pdf-row input[type="file"]{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    font-family:inherit;
+  }
+  .new-date-pdf-row button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    background:var(--mint);
+    color:#0A2E28;
+    font-weight:700;
+    font-size:0.88rem;
+    padding:10px 16px;
+  }
+  .new-date-pdf-row button:disabled{ opacity:0.6; cursor:default; }
+
+  .pdf-review-modal{
+    max-width:600px;
+    width:100%;
+  }
+  .pdf-review-list{
+    max-height:50vh;
+    overflow-y:auto;
+    margin:14px 0;
+  }
+  .pdf-review-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .pdf-review-row input{
+    padding:8px 10px;
+    border-radius:8px;
+    border:1.5px solid var(--line);
+    background:var(--bg);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:0.85rem;
+  }
+  .pdf-review-row .pdf-row-phone{ grid-column:1 / -1; }
+  .pdf-review-row .pdf-row-del{
+    grid-column:1 / -1;
+    justify-self:end;
+    background:none;
+    border:none;
+    color:var(--danger);
+    font-size:0.78rem;
+    font-weight:700;
+    cursor:pointer;
+    padding:2px 4px;
+  }
+  .pdf-review-hint{
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    margin-bottom:6px;
   }
 
   .empty{
@@ -745,6 +823,7 @@
 
   <div class="admin-bar" id="adminBar" style="display:none;">
     <div class="admin-bar-left">
+      <span id="adminCurrentBaseDate" class="admin-current-base"></span>
       <button id="adminDateChip">📅 기준일</button>
       <button id="promoteBaseDate" style="display:none;">이 날짜를 기준일로 지정</button>
     </div>
@@ -796,6 +875,18 @@
   <div class="modal small change-info-modal">
     <h2>변동 내역</h2>
     <div id="changeInfoContent"></div>
+  </div>
+</div>
+
+<div class="overlay" id="pdfReviewOverlay">
+  <div class="modal pdf-review-modal">
+    <h2 id="pdfReviewTitle">PDF 인식 결과 검토</h2>
+    <div class="pdf-review-hint">자동으로 추출한 내용입니다. 틀린 부분을 고친 뒤 저장하세요.</div>
+    <div class="pdf-review-list" id="pdfReviewList"></div>
+    <div class="modal-actions">
+      <button id="pdfReviewCancel">취소</button>
+      <button class="primary" id="pdfReviewSave">이 데이터로 저장</button>
+    </div>
   </div>
 </div>
 
@@ -1159,12 +1250,16 @@ const adminOverlay = document.getElementById('adminOverlay');
 const adminPassword = document.getElementById('adminPassword');
 const adminBar = document.getElementById('adminBar');
 const adminDateChip = document.getElementById('adminDateChip');
+const adminCurrentBaseDate = document.getElementById('adminCurrentBaseDate');
 const promoteBaseDate = document.getElementById('promoteBaseDate');
 const adminExit = document.getElementById('adminExit');
 const confirmOverlay = document.getElementById('confirmOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
 const changeInfoOverlay = document.getElementById('changeInfoOverlay');
 const changeInfoContent = document.getElementById('changeInfoContent');
+const pdfReviewOverlay = document.getElementById('pdfReviewOverlay');
+const pdfReviewList = document.getElementById('pdfReviewList');
+const pdfReviewTitle = document.getElementById('pdfReviewTitle');
 const archiveToggle = document.getElementById('archiveToggle');
 const archiveOverlay = document.getElementById('archiveOverlay');
 const archiveModalTitle = document.getElementById('archiveModalTitle');
@@ -1356,6 +1451,7 @@ function render(){
 
   adminBar.style.display = adminMode ? 'flex' : 'none';
   if(adminMode){
+    adminCurrentBaseDate.textContent = '현재 기준일 : ' + formatRefDate(baseDate);
     adminDateChip.textContent = '📅 ' + chipLabel(adminWorkingDate);
     promoteBaseDate.style.display = (adminWorkingDate && adminWorkingDate !== baseDate) ? '' : 'none';
   }
@@ -1647,7 +1743,7 @@ function openDatePicker(mode){
     addWrap.className = 'new-date-row';
     addWrap.innerHTML = `
       <input type="date" id="newDateInput">
-      <button id="newDateAdd">추가</button>
+      <button id="newDateAdd">빈 데이터로 추가</button>
     `;
     archiveList.appendChild(addWrap);
     addWrap.querySelector('#newDateAdd').onclick = () => {
@@ -1661,6 +1757,39 @@ function openDatePicker(mode){
       adminWorkingDate = val;
       archiveOverlay.classList.remove('open');
       render();
+    };
+
+    const pdfWrap = document.createElement('div');
+    pdfWrap.className = 'new-date-pdf-row';
+    pdfWrap.innerHTML = `
+      <div class="new-date-pdf-label">또는 PDF에서 자동으로 만들기</div>
+      <input type="file" id="newDatePdfInput" accept="application/pdf">
+      <button id="newDatePdfBtn">PDF 읽어서 검토하기</button>
+    `;
+    archiveList.appendChild(pdfWrap);
+    pdfWrap.querySelector('#newDatePdfBtn').onclick = async () => {
+      const val = addWrap.querySelector('#newDateInput').value;
+      const fileInput = pdfWrap.querySelector('#newDatePdfInput');
+      const file = fileInput.files && fileInput.files[0];
+      if(!val){ showToast('먼저 날짜를 선택해주세요'); return; }
+      if(!file){ showToast('PDF 파일을 선택해주세요'); return; }
+      const btn = pdfWrap.querySelector('#newDatePdfBtn');
+      btn.disabled = true;
+      btn.textContent = 'PDF 읽는 중...';
+      try{
+        const lines = await extractPdfLines(file);
+        const rows = lines.map(parseLineToContact).filter(Boolean);
+        if(rows.length === 0){
+          showToast('PDF에서 전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
+        }else{
+          archiveOverlay.classList.remove('open');
+          openPdfReview(val, rows);
+        }
+      }catch(e){
+        showToast('PDF를 읽는 중 오류가 발생했습니다');
+      }
+      btn.disabled = false;
+      btn.textContent = 'PDF 읽어서 검토하기';
     };
   }
 
@@ -1753,6 +1882,125 @@ archiveExit.addEventListener('click', () => {
 });
 
 archiveDateChange.addEventListener('click', () => openDatePicker('view'));
+
+function loadScriptOnce(src){
+  return new Promise((resolve, reject) => {
+    if(document.querySelector(`script[src="${src}"]`)){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('script load failed: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+async function ensurePdfJs(){
+  if(window.pdfjsLib) return;
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function extractPdfLines(file){
+  await ensurePdfJs();
+  const buf = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  const lines = [];
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const rows = {};
+    content.items.forEach(it => {
+      const y = Math.round(it.transform[5] / 3) * 3; // 비슷한 높이는 같은 줄로 묶음
+      (rows[y] = rows[y] || []).push({ x: it.transform[4], str: it.str });
+    });
+    Object.keys(rows)
+      .map(Number)
+      .sort((a, b) => b - a)
+      .forEach(y => {
+        const lineText = rows[y]
+          .sort((a, b) => a.x - b.x)
+          .map(s => s.str)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if(lineText) lines.push(lineText);
+      });
+  }
+  return lines;
+}
+
+function parseLineToContact(line){
+  const phoneMatch = line.match(/(0\d{1,2}-\d{3,4}-\d{4}|\d{3,4}-\d{4})/);
+  if(!phoneMatch) return null;
+  let phone = phoneMatch[0];
+  if(!phone.startsWith('0')) phone = '051-' + phone;
+  const rest = line.replace(phoneMatch[0], '').trim();
+  const tokens = rest.split(/\s+/).filter(Boolean);
+  const dept = tokens[0] || '';
+  const name = tokens[1] || '';
+  const duty = tokens.slice(2).join(' ') || '';
+  return { id: 'r' + Math.random().toString(36).slice(2, 9), dept, name, duty, phone, note: '' };
+}
+
+function openPdfReview(dateVal, rows){
+  pdfReviewTitle.textContent = formatRefDate(dateVal) + ' — PDF 인식 결과 검토';
+  const state = rows.map(r => ({...r}));
+
+  function renderRows(){
+    pdfReviewList.innerHTML = '';
+    state.forEach((r, idx) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'pdf-review-row';
+      rowEl.innerHTML = `
+        <input type="text" data-field="dept" placeholder="부서" value="${escapeAttr(r.dept)}">
+        <input type="text" data-field="name" placeholder="이름" value="${escapeAttr(r.name)}">
+        <input type="text" data-field="duty" placeholder="업무" value="${escapeAttr(r.duty)}">
+        <input type="text" class="pdf-row-phone" data-field="phone" placeholder="전화번호" value="${escapeAttr(r.phone)}">
+        <button type="button" class="pdf-row-del">삭제</button>
+      `;
+      rowEl.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('input', () => {
+          state[idx][inp.dataset.field] = inp.value;
+        });
+      });
+      rowEl.querySelector('.pdf-row-del').addEventListener('click', () => {
+        state.splice(idx, 1);
+        renderRows();
+      });
+      pdfReviewList.appendChild(rowEl);
+    });
+  }
+  renderRows();
+
+  pdfReviewOverlay.classList.add('open');
+
+  const cancelBtn = document.getElementById('pdfReviewCancel');
+  const saveBtn = document.getElementById('pdfReviewSave');
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  const newSaveBtn = saveBtn.cloneNode(true);
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+  newCancelBtn.addEventListener('click', () => {
+    pdfReviewOverlay.classList.remove('open');
+  });
+  newSaveBtn.addEventListener('click', () => {
+    const cleaned = state
+      .filter(r => r.name && r.phone)
+      .map(r => ({ id: r.id, name: r.name, dept: r.dept, duty: r.duty, phone: r.phone, note: '', updatedAt: Date.now() }));
+    if(cleaned.length === 0){
+      showToast('저장할 데이터가 없습니다');
+      return;
+    }
+    const arc = loadArchive();
+    arc[dateVal] = cleaned;
+    try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
+    adminWorkingDate = dateVal;
+    pdfReviewOverlay.classList.remove('open');
+    showToast(formatRefDate(dateVal) + ' 데이터를 PDF에서 생성했습니다');
+    render();
+  });
+}
 
 function openChangeInfo(change){
   let html = '';
