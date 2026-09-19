@@ -222,6 +222,28 @@
     box-shadow:0 6px 20px rgba(0,0,0,0.25);
   }
   .browse-exit-fixed:active{ transform:translateX(-50%) scale(0.96); }
+  .browse-exit-fixed.stacked{ bottom:calc(76px + env(safe-area-inset-bottom)); }
+
+  .admin-exit-fixed{
+    position:fixed;
+    left:50%;
+    bottom:calc(18px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    z-index:9;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.9rem;
+    font-weight:700;
+    padding:13px 26px;
+    border-radius:24px;
+    border:none;
+    background:var(--surface);
+    color:var(--ink-soft);
+    border:1.5px solid var(--line);
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  }
+  .admin-exit-fixed:hover{ color:var(--danger); border-color:var(--danger); }
+  .admin-exit-fixed:active{ transform:translateX(-50%) scale(0.96); }
 
   .tabs{
     display:flex;
@@ -501,6 +523,9 @@
     font-size:0.78rem;
     font-weight:700;
     color:var(--ink-soft);
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
   }
   .admin-bar button{
     font-family:inherit;
@@ -579,66 +604,44 @@
     max-height:320px;
     overflow-y:auto;
   }
-  .new-date-row{
-    display:flex;
-    gap:8px;
-    margin-bottom:14px;
-    padding-bottom:14px;
-    border-bottom:1px solid var(--line);
-  }
-  .new-date-row input[type="date"]{
-    flex:1;
-    padding:10px 12px;
-    border-radius:10px;
-    border:1.5px solid var(--line);
-    background:var(--bg);
-    color:var(--ink);
-    font-family:inherit;
-    font-size:0.9rem;
-  }
-  .new-date-row button{
-    font-family:inherit;
-    cursor:pointer;
-    border:none;
-    border-radius:10px;
-    background:var(--primary);
-    color:#fff;
-    font-weight:700;
-    font-size:0.88rem;
-    padding:10px 16px;
-    flex-shrink:0;
-  }
   .archive-empty{
     color:var(--ink-soft);
     font-size:0.88rem;
     text-align:center;
     padding:18px 4px;
   }
-  .new-date-pdf-row{
+
+  .add-date-options{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    margin-top:6px;
+  }
+  .add-date-option{
     display:flex;
     flex-direction:column;
     gap:8px;
-    margin-bottom:16px;
-    padding-bottom:16px;
+    padding:14px 0;
+  }
+  .add-date-option:first-child{
     border-bottom:1px solid var(--line);
   }
-  .new-date-pdf-label{
-    font-size:0.8rem;
-    font-weight:700;
-    color:var(--ink-soft);
+  .add-date-option-title{
+    font-size:0.9rem;
+    font-weight:800;
+    color:var(--ink);
   }
-  .new-date-pdf-hint{
-    font-size:0.74rem;
+  .add-date-option-hint{
+    font-size:0.76rem;
     color:var(--ink-soft);
-    opacity:0.85;
     line-height:1.4;
   }
-  .new-date-pdf-row input[type="file"]{
+  .add-date-option input[type="file"]{
     font-size:0.82rem;
     color:var(--ink-soft);
     font-family:inherit;
   }
-  .new-date-pdf-row button{
+  .add-date-option button{
     font-family:inherit;
     cursor:pointer;
     border:none;
@@ -647,9 +650,20 @@
     color:#0A2E28;
     font-weight:700;
     font-size:0.88rem;
-    padding:10px 16px;
+    padding:11px 16px;
   }
-  .new-date-pdf-row button:disabled{ opacity:0.6; cursor:default; }
+  .add-date-option button:disabled{ opacity:0.6; cursor:default; }
+  #addDateManualBtn{
+    background:var(--primary);
+    color:#fff;
+  }
+  .add-date-divider{
+    text-align:center;
+    font-size:0.78rem;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin:2px 0;
+  }
 
   .pdf-review-modal{
     max-width:600px;
@@ -829,11 +843,10 @@
 
   <div class="admin-bar" id="adminBar" style="display:none;">
     <div class="admin-bar-left">
-      <span id="adminCurrentBaseDate" class="admin-current-base"></span>
-      <button id="adminDateChip">📅 기준일</button>
+      <span id="adminCurrentBaseDate" class="admin-current-base" role="button" tabindex="0"></span>
+      <button id="adminDateChip">+ 기준일 추가</button>
       <button id="promoteBaseDate" style="display:none;">이 날짜를 기준일로 지정</button>
     </div>
-    <button id="adminExit">관리자 모드 종료</button>
   </div>
 
   <div class="utility-row">
@@ -852,6 +865,8 @@
 <div class="admin-footer">
   <button id="adminToggle">관리자 모드로 들어가기</button>
 </div>
+
+<button id="adminExit" class="admin-exit-fixed" style="display:none;">관리자 모드 종료</button>
 
 <div class="overlay" id="adminOverlay">
   <div class="modal small">
@@ -903,6 +918,33 @@
     <div id="archiveList"></div>
     <div class="modal-actions">
       <button id="archiveCancel">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="addDateOverlay">
+  <div class="modal small">
+    <h2>기준일 추가</h2>
+    <div class="field">
+      <label for="addDateInput">날짜</label>
+      <input type="date" id="addDateInput">
+    </div>
+    <div class="add-date-options">
+      <div class="add-date-option">
+        <div class="add-date-option-title">파일로 추가</div>
+        <div class="add-date-option-hint">PDF 파일을 넣으면 정확도가 높고, 일반 이미지 파일(사진 등)은 인식 정확도가 떨어질 수 있어요.</div>
+        <input type="file" id="addDateFileInput" accept="application/pdf,image/*">
+        <button id="addDateFileBtn">파일 읽어서 검토하기</button>
+      </div>
+      <div class="add-date-divider">또는</div>
+      <div class="add-date-option">
+        <div class="add-date-option-title">직접 입력으로 추가</div>
+        <div class="add-date-option-hint">빈 목록으로 시작해서 연락처를 하나씩 직접 추가합니다.</div>
+        <button id="addDateManualBtn">직접 입력으로 시작</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="addDateCancel">닫기</button>
     </div>
   </div>
 </div>
@@ -1268,6 +1310,12 @@ const pdfReviewList = document.getElementById('pdfReviewList');
 const pdfReviewTitle = document.getElementById('pdfReviewTitle');
 const archiveToggle = document.getElementById('archiveToggle');
 const archiveOverlay = document.getElementById('archiveOverlay');
+const addDateOverlay = document.getElementById('addDateOverlay');
+const addDateInput = document.getElementById('addDateInput');
+const addDateFileInput = document.getElementById('addDateFileInput');
+const addDateFileBtn = document.getElementById('addDateFileBtn');
+const addDateManualBtn = document.getElementById('addDateManualBtn');
+const addDateCancel = document.getElementById('addDateCancel');
 const archiveModalTitle = document.getElementById('archiveModalTitle');
 const archiveList = document.getElementById('archiveList');
 const yearChips = document.getElementById('yearChips');
@@ -1451,14 +1499,15 @@ function render(){
   browseToggle.textContent = browseMode ? '과별 보기 닫기' : '과별로 보기';
   browseToggle.style.display = browseMode ? 'none' : '';
   browseExitFixed.style.display = browseMode ? '' : 'none';
+  browseExitFixed.classList.toggle('stacked', adminMode);
   archiveToggle.style.display = 'none'; // 아카이브 기능 임시 비활성화
   openAddBtn.style.display = adminMode ? '' : 'none';
-  adminFooter.style.display = isActiveView() ? 'none' : '';
+  adminFooter.style.display = (isActiveView() || adminMode) ? 'none' : '';
+  adminExit.style.display = adminMode ? '' : 'none';
 
   adminBar.style.display = adminMode ? 'flex' : 'none';
   if(adminMode){
     adminCurrentBaseDate.textContent = '현재 기준일 : ' + formatRefDate(baseDate);
-    adminDateChip.textContent = '📅 ' + chipLabel(adminWorkingDate);
     promoteBaseDate.style.display = (adminWorkingDate && adminWorkingDate !== baseDate) ? '' : 'none';
   }
 
@@ -1736,70 +1785,13 @@ browseExitFixed.addEventListener('click', () => {
 });
 
 function openDatePicker(mode){
-  archiveModalTitle.textContent = mode === 'admin' ? '기준일 선택 / 추가' : '기준일 변경';
+  archiveModalTitle.textContent = mode === 'admin' ? '기준일 선택' : '기준일 변경';
   const arc = loadArchive();
   if(!arc[baseDate]) arc[baseDate] = contacts; // 기준일 항목이 없으면 현재 데이터로 보정
   const dates = Object.keys(arc).sort((a,b)=> b.localeCompare(a));
 
   yearChips.innerHTML = '';
   archiveList.innerHTML = '';
-
-  if(mode === 'admin'){
-    const addWrap = document.createElement('div');
-    addWrap.className = 'new-date-row';
-    addWrap.innerHTML = `
-      <input type="date" id="newDateInput">
-      <button id="newDateAdd">빈 데이터로 추가</button>
-    `;
-    archiveList.appendChild(addWrap);
-    addWrap.querySelector('#newDateAdd').onclick = () => {
-      const val = addWrap.querySelector('#newDateInput').value;
-      if(!val){ showToast('날짜를 선택해주세요'); return; }
-      if(!arc[val]){
-        arc[val] = JSON.parse(JSON.stringify(contacts)); // 현재 기준일 데이터를 복사해서 시작
-        try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
-        showToast(formatRefDate(val) + ' 데이터를 현재 기준일 복사본으로 새로 만들었습니다');
-      }
-      adminWorkingDate = val;
-      archiveOverlay.classList.remove('open');
-      render();
-    };
-
-    const pdfWrap = document.createElement('div');
-    pdfWrap.className = 'new-date-pdf-row';
-    pdfWrap.innerHTML = `
-      <div class="new-date-pdf-label">또는 파일에서 자동으로 만들기</div>
-      <div class="new-date-pdf-hint">PDF 파일을 넣으면 정확도가 높고, 일반 이미지 파일(사진 등)은 인식 정확도가 떨어질 수 있어요.</div>
-      <input type="file" id="newDatePdfInput" accept="application/pdf,image/*">
-      <button id="newDatePdfBtn">파일 읽어서 검토하기</button>
-    `;
-    archiveList.appendChild(pdfWrap);
-    pdfWrap.querySelector('#newDatePdfBtn').onclick = async () => {
-      const val = addWrap.querySelector('#newDateInput').value;
-      const fileInput = pdfWrap.querySelector('#newDatePdfInput');
-      const file = fileInput.files && fileInput.files[0];
-      if(!val){ showToast('먼저 날짜를 선택해주세요'); return; }
-      if(!file){ showToast('PDF 또는 이미지 파일을 선택해주세요'); return; }
-      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-      const btn = pdfWrap.querySelector('#newDatePdfBtn');
-      btn.disabled = true;
-      btn.textContent = isPdf ? 'PDF 읽는 중...' : '이미지 인식 중... (시간이 걸릴 수 있어요)';
-      try{
-        const lines = isPdf ? await extractPdfLines(file) : await extractImageLines(file);
-        const rows = lines.map(parseLineToContact).filter(Boolean);
-        if(rows.length === 0){
-          showToast('전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
-        }else{
-          archiveOverlay.classList.remove('open');
-          openPdfReview(val, rows);
-        }
-      }catch(e){
-        showToast('파일을 읽는 중 오류가 발생했습니다');
-      }
-      btn.disabled = false;
-      btn.textContent = '파일 읽어서 검토하기';
-    };
-  }
 
   if(dates.length === 0){
     const empty = document.createElement('div');
@@ -1868,7 +1860,58 @@ function openDatePicker(mode){
 }
 
 archiveToggle.addEventListener('click', () => openDatePicker('view'));
-adminDateChip.addEventListener('click', () => openDatePicker('admin'));
+adminDateChip.addEventListener('click', () => openAddDateFlow());
+adminCurrentBaseDate.addEventListener('click', () => openDatePicker('admin'));
+
+function openAddDateFlow(){
+  addDateInput.value = '';
+  addDateFileInput.value = '';
+  addDateFileBtn.disabled = false;
+  addDateFileBtn.textContent = '파일 읽어서 검토하기';
+  addDateOverlay.classList.add('open');
+}
+
+addDateCancel.addEventListener('click', () => {
+  addDateOverlay.classList.remove('open');
+});
+
+addDateManualBtn.addEventListener('click', () => {
+  const val = addDateInput.value;
+  if(!val){ showToast('날짜를 선택해주세요'); return; }
+  const arc = loadArchive();
+  if(!arc[val]){
+    arc[val] = [];
+    try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
+  }
+  adminWorkingDate = val;
+  addDateOverlay.classList.remove('open');
+  showToast(formatRefDate(val) + ' — 빈 목록에서 시작합니다. + 연락처 추가로 입력해주세요');
+  render();
+});
+
+addDateFileBtn.addEventListener('click', async () => {
+  const val = addDateInput.value;
+  const file = addDateFileInput.files && addDateFileInput.files[0];
+  if(!val){ showToast('먼저 날짜를 선택해주세요'); return; }
+  if(!file){ showToast('PDF 또는 이미지 파일을 선택해주세요'); return; }
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  addDateFileBtn.disabled = true;
+  addDateFileBtn.textContent = isPdf ? 'PDF 읽는 중...' : '이미지 인식 중... (시간이 걸릴 수 있어요)';
+  try{
+    const lines = isPdf ? await extractPdfLines(file) : await extractImageLines(file);
+    const rows = lines.map(parseLineToContact).filter(Boolean);
+    if(rows.length === 0){
+      showToast('전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
+    }else{
+      addDateOverlay.classList.remove('open');
+      openPdfReview(val, rows);
+    }
+  }catch(e){
+    showToast('파일을 읽는 중 오류가 발생했습니다');
+  }
+  addDateFileBtn.disabled = false;
+  addDateFileBtn.textContent = '파일 읽어서 검토하기';
+});
 promoteBaseDate.addEventListener('click', () => {
   if(!adminWorkingDate || adminWorkingDate === baseDate) return;
   showConfirm(`${formatDateLabel(adminWorkingDate)}를 새로운 기준일로 지정할까요? 이후 모든 사용자에게 이 날짜의 데이터가 기본으로 보여집니다.`, () => {
@@ -1884,6 +1927,7 @@ promoteBaseDate.addEventListener('click', () => {
 });
 document.getElementById('archiveCancel').addEventListener('click', () => archiveOverlay.classList.remove('open'));
 archiveOverlay.addEventListener('click', (e) => { if(e.target === archiveOverlay) archiveOverlay.classList.remove('open'); });
+addDateOverlay.addEventListener('click', (e) => { if(e.target === addDateOverlay) addDateOverlay.classList.remove('open'); });
 archiveExit.addEventListener('click', () => {
   archiveDate = null;
   render();
