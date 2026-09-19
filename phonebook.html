@@ -1057,6 +1057,24 @@ function snapshotBase(list){
 
 let baseDate = loadBaseDate();
 let contacts = loadContacts();
+
+// 일회성 정리: 예전 버전에서 자동 저장된 다른 날짜 기록이 남아있다면
+// 기준일(baseDate) 하나만 남기고 모두 제거합니다.
+(function cleanupStrayDates(){
+  const CLEANUP_FLAG = 'busan-ulsan-mma-cleanup-v1';
+  try{
+    if(!localStorage.getItem(CLEANUP_FLAG)){
+      const arc = loadArchive();
+      const cleaned = {};
+      cleaned[baseDate] = arc[baseDate] || contacts;
+      localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cleaned));
+      localStorage.setItem(CLEANUP_FLAG, '1');
+    }
+  }catch(e){
+    // 정리 실패는 조용히 무시
+  }
+})();
+
 snapshotBase(contacts);
 let activeTab = '전체';
 let searchTerm = '';
