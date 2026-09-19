@@ -320,14 +320,8 @@
     white-space:nowrap;
     flex-shrink:0;
     cursor:pointer;
-  }
-  .change-transfer{
     background:var(--coral);
     color:#fff;
-  }
-  .change-duty{
-    background:var(--mint);
-    color:#0A2E28;
   }
   .card .duty{
     font-size:12.5px;
@@ -418,6 +412,40 @@
     margin:0 0 4px;
     text-align:center;
     padding:10px 0 4px;
+  }
+
+  .change-info-overlay{ align-items:center; cursor:pointer; }
+  .change-info-modal{
+    cursor:default;
+    text-align:center;
+  }
+  .change-info-modal h2{
+    text-align:center;
+    margin-bottom:16px;
+  }
+  .change-info-row{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    padding:14px 0;
+    border-top:1px solid var(--line);
+  }
+  .change-info-row:first-of-type{ border-top:none; }
+  .change-info-label{
+    font-size:0.78rem;
+    font-weight:700;
+    color:var(--ink-soft);
+  }
+  .change-info-val{
+    font-size:1.05rem;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .change-info-arrow{ color:var(--coral); margin:0 6px; }
+  .change-info-hint{
+    margin-top:16px;
+    font-size:0.78rem;
+    color:var(--ink-soft);
   }
 
   .archive-banner{
@@ -761,6 +789,13 @@
       <button id="confirmCancel">취소</button>
       <button class="primary" id="confirmOk">확인</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay change-info-overlay" id="changeInfoOverlay">
+  <div class="modal small change-info-modal">
+    <h2>변동 내역</h2>
+    <div id="changeInfoContent"></div>
   </div>
 </div>
 
@@ -1128,6 +1163,8 @@ const promoteBaseDate = document.getElementById('promoteBaseDate');
 const adminExit = document.getElementById('adminExit');
 const confirmOverlay = document.getElementById('confirmOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
+const changeInfoOverlay = document.getElementById('changeInfoOverlay');
+const changeInfoContent = document.getElementById('changeInfoContent');
 const archiveToggle = document.getElementById('archiveToggle');
 const archiveOverlay = document.getElementById('archiveOverlay');
 const archiveModalTitle = document.getElementById('archiveModalTitle');
@@ -1227,10 +1264,16 @@ function getChangedPeople(){
   currList.forEach(c => {
     const prev = prevMap[c.id];
     if(!prev) return;
-    if(prev.dept !== c.dept){
-      changed.push({...c, changeType:'transfer', fromDept: prev.dept, toDept: c.dept});
-    }else if((prev.duty||'') !== (c.duty||'')){
-      changed.push({...c, changeType:'duty', fromDuty: prev.duty||'(없음)', toDuty: c.duty||'(없음)'});
+    const deptChanged = prev.dept !== c.dept;
+    const dutyChanged = (prev.duty||'') !== (c.duty||'');
+    if(deptChanged || dutyChanged){
+      changed.push({
+        ...c,
+        changeType: deptChanged ? 'transfer' : 'duty',
+        deptChanged, dutyChanged,
+        fromDept: prev.dept, toDept: c.dept,
+        fromDuty: prev.duty || '(없음)', toDuty: c.duty || '(없음)'
+      });
     }
   });
   return changed;
@@ -1381,12 +1424,9 @@ function renderCards(list, changedMap){
     const isNew = c.updatedAt && (Date.now() - c.updatedAt) < NEW_THRESHOLD_MS;
     const phoneShort = (c.phone||'').replace('051-', '').replace('052-', '');
     const change = changedMap[c.id];
-    let changeBadge = '';
-    if(change && change.changeType === 'transfer'){
-      changeBadge = `<button type="button" class="change-badge change-transfer" data-id="${escapeAttr(c.id)}">이동됨</button>`;
-    }else if(change && change.changeType === 'duty'){
-      changeBadge = `<button type="button" class="change-badge change-duty" data-id="${escapeAttr(c.id)}">업무변경</button>`;
-    }
+    const changeBadge = change
+      ? `<button type="button" class="change-badge" data-id="${escapeAttr(c.id)}">변동됨</button>`
+      : '';
     card.innerHTML = `
       <div class="left">
         <div class="name-row">
@@ -1405,11 +1445,7 @@ function renderCards(list, changedMap){
       if(badgeEl){
         badgeEl.addEventListener('click', (e) => {
           e.stopPropagation();
-          if(change.changeType === 'transfer'){
-            showToast(`${change.fromDept} → ${change.toDept}로 이동`);
-          }else{
-            showToast(`업무 변경: ${change.fromDuty} → ${change.toDuty}`);
-          }
+          openChangeInfo(change);
         });
       }
     }
@@ -1717,6 +1753,28 @@ archiveExit.addEventListener('click', () => {
 });
 
 archiveDateChange.addEventListener('click', () => openDatePicker('view'));
+
+function openChangeInfo(change){
+  let html = '';
+  if(change.deptChanged){
+    html += `<div class="change-info-row">
+      <span class="change-info-label">부서</span>
+      <span class="change-info-val">${escapeHtml(change.fromDept)}<span class="change-info-arrow">→</span>${escapeHtml(change.toDept)}</span>
+    </div>`;
+  }
+  if(change.dutyChanged){
+    html += `<div class="change-info-row">
+      <span class="change-info-label">업무</span>
+      <span class="change-info-val">${escapeHtml(change.fromDuty)}<span class="change-info-arrow">→</span>${escapeHtml(change.toDuty)}</span>
+    </div>`;
+  }
+  html += `<div class="change-info-hint">화면을 누르면 닫힙니다</div>`;
+  changeInfoContent.innerHTML = html;
+  changeInfoOverlay.classList.add('open');
+}
+changeInfoOverlay.addEventListener('click', () => {
+  changeInfoOverlay.classList.remove('open');
+});
 
 function showConfirm(message, onConfirm){
   confirmMessage.textContent = message;
