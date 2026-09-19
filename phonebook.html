@@ -546,14 +546,6 @@
     background:var(--coral);
     color:#fff;
   }
-  #adminExit{
-    background:transparent;
-    color:var(--ink-soft);
-    text-decoration:underline;
-    text-underline-offset:3px;
-    padding:9px 4px;
-  }
-  #adminExit:hover{ color:var(--danger); }
 
   .archive-item{
     width:100%;
@@ -567,24 +559,8 @@
     font-weight:600;
     font-family:inherit;
     cursor:pointer;
-  }
-  .archive-item-row{
-    display:flex;
-    align-items:stretch;
-    gap:8px;
     margin-bottom:8px;
   }
-  .archive-item-row .archive-item{ margin-bottom:0; flex:1; }
-  .archive-item-del{
-    flex-shrink:0;
-    width:44px;
-    border:1.5px solid var(--line);
-    border-radius:12px;
-    background:var(--bg);
-    font-size:1rem;
-    cursor:pointer;
-  }
-  .archive-item-del:hover{ border-color:var(--danger); }
   .archive-item:hover{ border-color:var(--primary); }
   .archive-item .archive-item-sub{
     display:block;
@@ -643,6 +619,36 @@
     font-weight:800;
     color:var(--ink);
     margin-bottom:8px;
+  }
+  .archive-action-row{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .archive-action-row button{
+    flex:1;
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    font-weight:700;
+    font-size:0.9rem;
+    padding:12px 10px;
+  }
+  #mgrEditBtn{ background:var(--primary); color:#fff; }
+  #mgrAddBtn{ background:var(--mint); color:#0A2E28; }
+  #mgrDeleteBtn{ background:var(--danger); color:#fff; }
+  .add-date-back{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-size:0.85rem;
+    font-weight:700;
+    padding:0 0 14px;
+    text-decoration:underline;
+    text-underline-offset:3px;
   }
   .add-date-options .field{ margin-bottom:8px; }
   .add-date-options .field input[type="date"]{
@@ -1800,10 +1806,6 @@ function openDatePicker(mode){
   yearChips.innerHTML = '';
   archiveList.innerHTML = '';
 
-  if(mode === 'admin'){
-    archiveList.appendChild(buildAddDateSection());
-  }
-
   if(dates.length === 0){
     const empty = document.createElement('div');
     empty.className = 'archive-empty';
@@ -1819,65 +1821,94 @@ function openDatePicker(mode){
     (byYear[y] = byYear[y] || []).push(d);
   });
   const years = Object.keys(byYear).sort((a,b)=> b.localeCompare(a));
-  const currentRef = mode === 'admin' ? (adminWorkingDate || baseDate) : (archiveDate || baseDate);
-  let selectedYear = years.includes(currentRef.slice(0,4)) ? currentRef.slice(0,4) : years[0];
+  let selectedDate = mode === 'admin' ? baseDate : (archiveDate || baseDate);
+  let selectedYear = years.includes(selectedDate.slice(0,4)) ? selectedDate.slice(0,4) : years[0];
 
-  function selectDate(d){
-    if(mode === 'admin'){
-      adminWorkingDate = d;
-    }else{
-      archiveDate = (d === baseDate) ? null : d;
-      searchTerm = '';
-      searchInput.value = '';
-      searchClear.classList.remove('show');
-      browseMode = false;
-      activeTab = '전체';
-    }
+  function selectDateView(d){
+    // 보기 모드: 바로 그 날짜 데이터를 보여줌
+    archiveDate = (d === baseDate) ? null : d;
+    searchTerm = '';
+    searchInput.value = '';
+    searchClear.classList.remove('show');
+    browseMode = false;
+    activeTab = '전체';
     archiveOverlay.classList.remove('open');
     render();
   }
 
-  function deleteDate(d){
-    if(d === baseDate){
+  function doEdit(){
+    adminWorkingDate = selectedDate;
+    archiveOverlay.classList.remove('open');
+    render();
+  }
+
+  function doDelete(){
+    if(selectedDate === baseDate){
       showToast('현재 기준일은 삭제할 수 없습니다. 다른 날짜를 기준일로 지정한 뒤 삭제해주세요.');
       return;
     }
-    showConfirm(`${formatDateLabel(d)} 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.`, () => {
+    showConfirm('삭제하시겠습니까?', () => {
       const arc2 = loadArchive();
-      delete arc2[d];
+      delete arc2[selectedDate];
       try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc2)); }catch(e){}
-      if(adminWorkingDate === d) adminWorkingDate = baseDate;
-      showToast(formatDateLabel(d) + ' 기록을 삭제했습니다');
+      if(adminWorkingDate === selectedDate) adminWorkingDate = baseDate;
+      showToast(formatDateLabel(selectedDate) + ' 기록을 삭제했습니다');
       archiveOverlay.classList.remove('open');
       render();
     });
   }
 
+  function doAdd(){
+    archiveList.innerHTML = '';
+    const backBtn = document.createElement('button');
+    backBtn.className = 'add-date-back';
+    backBtn.textContent = '뒤로가기';
+    backBtn.onclick = () => renderSelectView();
+    archiveList.appendChild(backBtn);
+    archiveList.appendChild(buildAddDateSection());
+  }
+
   const dateListWrap = document.createElement('div');
-  dateListWrap.className = 'archive-date-list';
-  archiveList.appendChild(dateListWrap);
+  const actionRow = document.createElement('div');
+  actionRow.className = 'archive-action-row';
 
   function renderDateList(){
     dateListWrap.innerHTML = '';
     byYear[selectedYear].forEach(d => {
-      const row = document.createElement('div');
-      row.className = 'archive-item-row';
-      const count = (arc[d]||[]).length;
       const btn = document.createElement('button');
-      btn.className = 'archive-item' + (d === currentRef ? ' today' : '');
+      btn.className = 'archive-item' + (d === selectedDate ? ' today' : '');
+      const count = (arc[d]||[]).length;
       btn.innerHTML = `${escapeHtml(formatDateLabel(d))}<span class="archive-item-sub">${count}건 저장됨</span>`;
-      btn.onclick = () => selectDate(d);
-      row.appendChild(btn);
       if(mode === 'admin'){
-        const delBtn = document.createElement('button');
-        delBtn.className = 'archive-item-del';
-        delBtn.setAttribute('aria-label', '삭제');
-        delBtn.textContent = '🗑';
-        delBtn.onclick = (e) => { e.stopPropagation(); deleteDate(d); };
-        row.appendChild(delBtn);
+        btn.onclick = () => {
+          selectedDate = d;
+          renderDateList();
+        };
+      }else{
+        btn.onclick = () => selectDateView(d);
       }
-      dateListWrap.appendChild(row);
+      dateListWrap.appendChild(btn);
     });
+  }
+
+  function renderSelectView(){
+    archiveList.innerHTML = '';
+    archiveList.appendChild(dateListWrap);
+    if(mode === 'admin'){
+      archiveList.appendChild(actionRow);
+    }
+    renderDateList();
+  }
+
+  if(mode === 'admin'){
+    actionRow.innerHTML = `
+      <button id="mgrEditBtn">수정</button>
+      <button id="mgrAddBtn">추가</button>
+      <button id="mgrDeleteBtn">삭제</button>
+    `;
+    actionRow.querySelector('#mgrEditBtn').onclick = doEdit;
+    actionRow.querySelector('#mgrAddBtn').onclick = doAdd;
+    actionRow.querySelector('#mgrDeleteBtn').onclick = doDelete;
   }
 
   years.forEach(y => {
@@ -1893,7 +1924,8 @@ function openDatePicker(mode){
     yearChips.appendChild(chip);
   });
 
-  renderDateList();
+  dateListWrap.className = 'archive-date-list';
+  renderSelectView();
   archiveOverlay.classList.add('open');
 }
 
