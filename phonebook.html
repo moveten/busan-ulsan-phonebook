@@ -62,26 +62,30 @@
   }
 
   *{box-sizing:border-box;}
-  body{
+  html, body{
     margin:0;
+    height:100%;
+    overflow:hidden;
+  }
+  body{
     background:var(--bg);
     color:var(--ink);
     font-family:"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
     line-height:1.5;
   }
-  body.modal-open{
-    overflow:hidden;
+  #scrollArea{
     height:100%;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
   }
-  html:has(body.modal-open){
+  body.modal-open #scrollArea{
     overflow:hidden;
-    height:100%;
   }
   .wrap{
     max-width:600px;
     margin:0 auto;
-    padding:16vh 20px 60px;
-    min-height:100vh;
+    padding:16vh 20px 100px;
+    min-height:100%;
     transition:padding 0.25s ease;
   }
   .wrap.active{
@@ -237,12 +241,10 @@
     padding:13px 26px;
     border-radius:24px;
     border:none;
-    background:var(--surface);
-    color:var(--ink-soft);
-    border:1.5px solid var(--line);
-    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    background:var(--danger);
+    color:#fff;
+    box-shadow:0 6px 20px rgba(0,0,0,0.35);
   }
-  .admin-exit-fixed:hover{ color:var(--danger); border-color:var(--danger); }
   .admin-exit-fixed:active{ transform:translateX(-50%) scale(0.96); }
 
   .tabs{
@@ -858,6 +860,7 @@
 </style>
 </head>
 <body>
+<div id="scrollArea">
 <div class="wrap" id="wrap">
   <div class="brand">
     <div class="brand-dot"></div>
@@ -894,6 +897,7 @@
   <div class="tabs" id="tabs" style="display:none;"></div>
 
   <div id="listArea"></div>
+</div>
 </div>
 
 <button id="browseExitFixed" class="browse-exit-fixed" style="display:none;">과별 보기 닫기</button>
