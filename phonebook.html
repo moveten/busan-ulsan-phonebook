@@ -627,6 +627,12 @@
     font-weight:700;
     color:var(--ink-soft);
   }
+  .new-date-pdf-hint{
+    font-size:0.74rem;
+    color:var(--ink-soft);
+    opacity:0.85;
+    line-height:1.4;
+  }
   .new-date-pdf-row input[type="file"]{
     font-size:0.82rem;
     color:var(--ink-soft);
@@ -1762,9 +1768,10 @@ function openDatePicker(mode){
     const pdfWrap = document.createElement('div');
     pdfWrap.className = 'new-date-pdf-row';
     pdfWrap.innerHTML = `
-      <div class="new-date-pdf-label">또는 PDF에서 자동으로 만들기</div>
-      <input type="file" id="newDatePdfInput" accept="application/pdf">
-      <button id="newDatePdfBtn">PDF 읽어서 검토하기</button>
+      <div class="new-date-pdf-label">또는 파일에서 자동으로 만들기</div>
+      <div class="new-date-pdf-hint">PDF 파일을 넣으면 정확도가 높고, 일반 이미지 파일(사진 등)은 인식 정확도가 떨어질 수 있어요.</div>
+      <input type="file" id="newDatePdfInput" accept="application/pdf,image/*">
+      <button id="newDatePdfBtn">파일 읽어서 검토하기</button>
     `;
     archiveList.appendChild(pdfWrap);
     pdfWrap.querySelector('#newDatePdfBtn').onclick = async () => {
@@ -1772,24 +1779,25 @@ function openDatePicker(mode){
       const fileInput = pdfWrap.querySelector('#newDatePdfInput');
       const file = fileInput.files && fileInput.files[0];
       if(!val){ showToast('먼저 날짜를 선택해주세요'); return; }
-      if(!file){ showToast('PDF 파일을 선택해주세요'); return; }
+      if(!file){ showToast('PDF 또는 이미지 파일을 선택해주세요'); return; }
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
       const btn = pdfWrap.querySelector('#newDatePdfBtn');
       btn.disabled = true;
-      btn.textContent = 'PDF 읽는 중...';
+      btn.textContent = isPdf ? 'PDF 읽는 중...' : '이미지 인식 중... (시간이 걸릴 수 있어요)';
       try{
-        const lines = await extractPdfLines(file);
+        const lines = isPdf ? await extractPdfLines(file) : await extractImageLines(file);
         const rows = lines.map(parseLineToContact).filter(Boolean);
         if(rows.length === 0){
-          showToast('PDF에서 전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
+          showToast('전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
         }else{
           archiveOverlay.classList.remove('open');
           openPdfReview(val, rows);
         }
       }catch(e){
-        showToast('PDF를 읽는 중 오류가 발생했습니다');
+        showToast('파일을 읽는 중 오류가 발생했습니다');
       }
       btn.disabled = false;
-      btn.textContent = 'PDF 읽어서 검토하기';
+      btn.textContent = '파일 읽어서 검토하기';
     };
   }
 
@@ -1927,6 +1935,18 @@ async function extractPdfLines(file){
       });
   }
   return lines;
+}
+
+async function ensureTesseract(){
+  if(window.Tesseract) return;
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js');
+}
+
+async function extractImageLines(file){
+  await ensureTesseract();
+  const result = await window.Tesseract.recognize(file, 'kor+eng');
+  const text = (result && result.data && result.data.text) || '';
+  return text.split('\n').map(l => l.trim()).filter(Boolean);
 }
 
 function parseLineToContact(line){
