@@ -294,15 +294,37 @@
   .section-label:first-child{ margin-top:6px; }
 
   .card{
+    position:relative;
+    overflow:hidden;
+    margin-bottom:8px;
+    border-radius:12px;
+  }
+  .card-body{
     background:var(--surface);
     border:0.5px solid var(--border-soft);
     border-radius:12px;
     padding:14px 16px;
-    margin-bottom:8px;
     display:flex;
     flex-direction:row;
     align-items:center;
     gap:12px;
+    position:relative;
+    z-index:1;
+  }
+  .card-delete-btn{
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:88px;
+    border:none;
+    background:var(--danger);
+    color:#fff;
+    font-family:inherit;
+    font-weight:800;
+    font-size:0.92rem;
+    cursor:pointer;
+    z-index:0;
   }
   .card .left{
     flex:1;
@@ -398,8 +420,16 @@
   }
   .card-actions{ display:none; }
 
-  .card{ touch-action:pan-y; user-select:none; position:relative; }
-  .card.dragging{ transition:none; }
+  .card-body{ touch-action:pan-y; user-select:none; transition:transform 0.22s ease; }
+  .card.revealed .card-body{ box-shadow:0 4px 16px rgba(0,0,0,0.2); }
+  .name-editable{
+    background:none;
+    border:none;
+    padding:0;
+    font-family:inherit;
+    cursor:pointer;
+    text-align:left;
+  }
 
   .admin-footer{
     position:fixed;
@@ -1587,10 +1617,12 @@ function renderCards(list, changedMap){
     const phoneEl = adminMode
       ? `<span class="phone-link phone-link-disabled">${escapeHtml(phoneShort)}</span>`
       : `<a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>`;
-    card.innerHTML = `
+    const nameTag = adminMode ? 'button' : 'span';
+    const nameAttrs = adminMode ? 'type="button" class="name name-editable"' : 'class="name"';
+    const cardBody = `
       <div class="left">
         <div class="name-row">
-          <span class="name">${highlightMatch(c.name, searchTerm.trim())}</span>
+          <${nameTag} ${nameAttrs}>${highlightMatch(c.name, searchTerm.trim())}</${nameTag}>
           <span class="dept">${escapeHtml(c.dept)}</span>
           ${changeBadge}
         </div>
@@ -1600,6 +1632,30 @@ function renderCards(list, changedMap){
         ${phoneEl}
       </div>
     `;
+
+    if(adminMode && !archiveDate){
+      card.innerHTML = `
+        <button type="button" class="card-delete-btn">삭제</button>
+        <div class="card-body">${cardBody}</div>
+      `;
+      const nameBtn = card.querySelector('.name-editable');
+      if(nameBtn){
+        nameBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if(card.classList.contains('revealed')) return; // 열려있을 때는 닫기만
+          showConfirm(`${c.name}님의 연락처를 수정하시겠습니까?`, () => openEdit(c.id));
+        });
+      }
+      const deleteBtn = card.querySelector('.card-delete-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showConfirm(`${c.name}님의 연락처를 삭제하시겠습니까?`, () => deleteContact(c.id));
+      });
+      attachSwipe(card, c);
+    }else{
+      card.innerHTML = `<div class="card-body">${cardBody}</div>`;
+    }
+
     if(change){
       const badgeEl = card.querySelector('.change-badge');
       if(badgeEl){
@@ -1609,12 +1665,74 @@ function renderCards(list, changedMap){
         });
       }
     }
-    if(adminMode && !archiveDate){
-      attachSwipe(card, c);
-    }
     frag.appendChild(card);
   });
   return frag;
+}
+
+let openSwipeCard = null;
+
+function attachSwipe(card, contact){
+  const body = card.querySelector('.card-body');
+  const REVEAL = 88;
+  let startX = 0, startY = 0, dx = 0, dragging = false, baseX = 0;
+
+  function setOpen(open){
+    card.classList.toggle('revealed', open);
+    body.style.transform = open ? `translateX(${REVEAL}px)` : '';
+    if(open){
+      if(openSwipeCard && openSwipeCard !== card) openSwipeCard.classList.contains('revealed') && closeSwipeCard(openSwipeCard);
+      openSwipeCard = card;
+    }else if(openSwipeCard === card){
+      openSwipeCard = null;
+    }
+  }
+
+  body.addEventListener('pointerdown', (e) => {
+    startX = e.clientX; startY = e.clientY; dragging = true;
+    baseX = card.classList.contains('revealed') ? REVEAL : 0;
+    dx = baseX;
+    body.style.transition = 'none';
+    body.setPointerCapture(e.pointerId);
+  });
+  body.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    const rawDx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if(Math.abs(dy) > 60){ dragging = false; body.style.transition = ''; body.style.transform = baseX ? `translateX(${baseX}px)` : ''; return; }
+    dx = Math.max(0, Math.min(REVEAL, baseX + rawDx));
+    body.style.transform = `translateX(${dx}px)`;
+  });
+  function endDrag(){
+    if(!dragging) return;
+    dragging = false;
+    body.style.transition = '';
+    const wasTap = Math.abs(dx - baseX) < 4;
+    if(wasTap){
+      if(baseX === 0){
+        // 닫힌 상태에서 탭: name 버튼 자체의 클릭 핸들러가 처리하므로 여기서는 아무것도 안 함
+        body.style.transform = '';
+      }else{
+        // 열린 상태에서 탭: 닫기
+        setOpen(false);
+      }
+      return;
+    }
+    if(dx > REVEAL / 2){
+      setOpen(true);
+    }else{
+      setOpen(false);
+    }
+  }
+  body.addEventListener('pointerup', endDrag);
+  body.addEventListener('pointercancel', endDrag);
+}
+
+function closeSwipeCard(card){
+  const body = card.querySelector('.card-body');
+  card.classList.remove('revealed');
+  if(body) body.style.transform = '';
+  if(openSwipeCard === card) openSwipeCard = null;
 }
 
 function attachTabSwipe(){
@@ -1647,38 +1765,6 @@ function attachTabSwipe(){
     }
   });
   listArea.addEventListener('pointercancel', () => { dragging = false; });
-}
-
-function attachSwipe(card, contact){
-  let startX = 0, startY = 0, dx = 0, dragging = false;
-  const THRESHOLD = 64;
-
-  card.addEventListener('pointerdown', (e) => {
-    startX = e.clientX; startY = e.clientY; dx = 0; dragging = true;
-    card.classList.add('dragging');
-    card.setPointerCapture(e.pointerId);
-  });
-  card.addEventListener('pointermove', (e) => {
-    if(!dragging) return;
-    dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if(Math.abs(dy) > 60){ dragging = false; card.style.transform = ''; return; }
-    card.style.transform = `translateX(${dx}px)`;
-  });
-  function endDrag(){
-    if(!dragging) return;
-    dragging = false;
-    card.classList.remove('dragging');
-    card.style.transform = '';
-    if(dx > THRESHOLD){
-      showConfirm(`${contact.name}님의 연락처를 수정하시겠습니까?`, () => openEdit(contact.id));
-    }else if(dx < -THRESHOLD){
-      showConfirm(`${contact.name}님의 연락처를 삭제하시겠습니까?`, () => deleteContact(contact.id));
-    }
-    dx = 0;
-  }
-  card.addEventListener('pointerup', endDrag);
-  card.addEventListener('pointercancel', endDrag);
 }
 
 function openAdd(){
