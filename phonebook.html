@@ -1525,8 +1525,7 @@ function render(){
   if(!adminMode){
     archiveBanner.style.display = 'flex';
     const refDate = archiveDate || baseDate;
-    const latestTag = refDate === baseDate ? ' (최신 업데이트)' : '';
-    archiveBannerText.textContent = '기준일 : ' + formatRefDate(refDate) + latestTag;
+    archiveBannerText.textContent = '기준일 : ' + formatRefDate(refDate);
     archiveExit.style.display = archiveDate ? '' : 'none';
   }else{
     archiveBanner.style.display = 'none';
