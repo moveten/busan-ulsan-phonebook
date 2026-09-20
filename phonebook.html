@@ -485,16 +485,6 @@
     font-size:0.98rem;
     font-weight:700;
   }
-  .latest-tag{
-    display:inline-block;
-    background:var(--primary);
-    color:#fff;
-    font-size:0.7rem;
-    font-weight:800;
-    padding:2px 8px;
-    border-radius:8px;
-    vertical-align:middle;
-  }
   .archive-banner-actions{
     display:flex;
     gap:8px;
@@ -1535,8 +1525,8 @@ function render(){
   if(!adminMode){
     archiveBanner.style.display = 'flex';
     const refDate = archiveDate || baseDate;
-    const latestTag = refDate === baseDate ? '<span class="latest-tag">최신</span>' : '';
-    archiveBannerText.innerHTML = '기준일 : ' + escapeHtml(formatRefDate(refDate)) + ' ' + latestTag;
+    const latestTag = refDate === baseDate ? ' (최신)' : '';
+    archiveBannerText.textContent = '기준일 : ' + formatRefDate(refDate) + latestTag;
     archiveExit.style.display = archiveDate ? '' : 'none';
   }else{
     archiveBanner.style.display = 'none';
