@@ -387,7 +387,7 @@
     align-items:center;
     padding-left:12px;
   }
-  .card a.phone-link{
+  .card .phone-link{
     color:var(--ink);
     background:transparent;
     text-decoration:none;
@@ -1584,6 +1584,9 @@ function renderCards(list, changedMap){
     const changeBadge = change
       ? `<button type="button" class="change-badge" data-id="${escapeAttr(c.id)}">변동됨</button>`
       : '';
+    const phoneEl = adminMode
+      ? `<span class="phone-link phone-link-disabled">${escapeHtml(phoneShort)}</span>`
+      : `<a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>`;
     card.innerHTML = `
       <div class="left">
         <div class="name-row">
@@ -1594,7 +1597,7 @@ function renderCards(list, changedMap){
         ${c.duty ? `<div class="duty">${highlightMatch(c.duty, searchTerm.trim())}</div>` : ''}
       </div>
       <div class="phone-col">
-        <a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>
+        ${phoneEl}
       </div>
     `;
     if(change){
