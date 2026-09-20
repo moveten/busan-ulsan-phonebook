@@ -938,6 +938,7 @@
       <button id="backupNowBtn">지금 백업</button>
       <label for="restoreFileInput" class="backup-restore-label">백업 불러오기</label>
       <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
+      <button id="driveBackupBtn">구글 드라이브로 백업</button>
     </div>
   </div>
 
@@ -1054,6 +1055,7 @@
 <script>
 const STORAGE_KEY = 'busan-ulsan-mma-contacts-v9';
 const ARCHIVE_KEY = 'busan-ulsan-mma-archive-v1';
+const GOOGLE_CLIENT_ID = ''; // 구글 클라우드에서 발급받은 OAuth 클라이언트 ID를 여기에 넣으세요
 const BASE_DATE_KEY = 'busan-ulsan-mma-basedate-v1';
 const DEFAULT_BASE_DATE = '2026-09-07';
 const AVATAR_COLORS = ['#3B5BFF', '#00C2A8', '#FF8B6B', '#8A5CF6', '#2AB673'];
@@ -1367,6 +1369,7 @@ const adminCurrentBaseDate = document.getElementById('adminCurrentBaseDate');
 const promoteBaseDate = document.getElementById('promoteBaseDate');
 const backupNowBtn = document.getElementById('backupNowBtn');
 const restoreFileInput = document.getElementById('restoreFileInput');
+const driveBackupBtn = document.getElementById('driveBackupBtn');
 const adminExit = document.getElementById('adminExit');
 const confirmOverlay = document.getElementById('confirmOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
@@ -2321,6 +2324,73 @@ function buildBackupPayload(){
   };
 }
 
+let googleAccessToken = null;
+let googleTokenClient = null;
+
+function ensureGoogleAuth(){
+  return new Promise((resolve, reject) => {
+    if(!GOOGLE_CLIENT_ID){
+      reject(new Error('구글 클라이언트 ID가 설정되지 않았습니다'));
+      return;
+    }
+    loadScriptOnce('https://accounts.google.com/gsi/client').then(() => {
+      if(!googleTokenClient){
+        googleTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/drive.file',
+          callback: (response) => {
+            if(response && response.access_token){
+              googleAccessToken = response.access_token;
+              resolve(googleAccessToken);
+            }else{
+              reject(new Error('구글 인증에 실패했습니다'));
+            }
+          }
+        });
+      }
+      googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
+    }).catch(reject);
+  });
+}
+
+async function backupToGoogleDrive(){
+  if(!GOOGLE_CLIENT_ID){
+    showToast('구글 드라이브 연동이 아직 설정되지 않았습니다');
+    return;
+  }
+  try{
+    await ensureGoogleAuth();
+    const payload = buildBackupPayload();
+    const today = new Date();
+    const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+    const fileName = `병무청전화번호부_백업_${y}${m}${d}.json`;
+    const metadata = { name: fileName, mimeType: 'application/json' };
+    const boundary = '-------314159265358979323846';
+    const body =
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(payload, null, 2)}\r\n` +
+      `--${boundary}--`;
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + googleAccessToken,
+        'Content-Type': `multipart/related; boundary=${boundary}`
+      },
+      body
+    });
+    if(res.ok){
+      showToast('구글 드라이브에 백업했습니다');
+    }else if(res.status === 401){
+      googleAccessToken = null;
+      showToast('인증이 만료됐습니다. 다시 시도해주세요');
+    }else{
+      showToast('구글 드라이브 백업에 실패했습니다');
+    }
+  }catch(e){
+    showToast('구글 드라이브 연동 중 오류가 발생했습니다');
+  }
+}
+
 function downloadBackupFile(){
   try{
     const payload = buildBackupPayload();
@@ -2418,6 +2488,8 @@ restoreFileInput.addEventListener('change', (e) => {
   if(file) restoreFromBackupFile(file);
   restoreFileInput.value = '';
 });
+
+driveBackupBtn.addEventListener('click', backupToGoogleDrive);
 adminExit.addEventListener('click', () => {
   adminMode = false;
   adminWorkingDate = null;
