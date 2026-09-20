@@ -64,29 +64,26 @@
   *{box-sizing:border-box;}
   html, body{
     margin:0;
-    height:100%;
-    overflow:hidden;
   }
   body{
     background:var(--bg);
     color:var(--ink);
     font-family:"Noto Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
     line-height:1.5;
-  }
-  #scrollArea{
-    height:100%;
-    overflow-y:auto;
     overflow-x:hidden;
-    -webkit-overflow-scrolling:touch;
   }
-  body.modal-open #scrollArea{
+  body.modal-open{
     overflow:hidden;
+    position:fixed;
+    left:0;
+    right:0;
+    width:100%;
   }
   .wrap{
     max-width:600px;
     margin:0 auto;
     padding:16vh 20px 100px;
-    min-height:100%;
+    min-height:100vh;
   }
   .wrap.active{
     padding-top:32px;
@@ -862,7 +859,6 @@
 </style>
 </head>
 <body>
-<div id="scrollArea">
 <div class="wrap" id="wrap">
   <div class="brand">
     <div class="brand-dot"></div>
@@ -899,7 +895,6 @@
   <div class="tabs" id="tabs" style="display:none;"></div>
 
   <div id="listArea"></div>
-</div>
 </div>
 
 <button id="browseExitFixed" class="browse-exit-fixed" style="display:none;">과별 보기 닫기</button>
@@ -2231,9 +2226,19 @@ document.getElementById('cancelBtn').onclick = closeModal;
 document.getElementById('saveBtn').onclick = saveContact;
 overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
 
+let lockedScrollY = 0;
 function syncModalScrollLock(){
   const anyOpen = !!document.querySelector('.overlay.open');
-  document.body.classList.toggle('modal-open', anyOpen);
+  const isLocked = document.body.classList.contains('modal-open');
+  if(anyOpen && !isLocked){
+    lockedScrollY = window.scrollY;
+    document.body.style.top = -lockedScrollY + 'px';
+    document.body.classList.add('modal-open');
+  }else if(!anyOpen && isLocked){
+    document.body.classList.remove('modal-open');
+    document.body.style.top = '';
+    window.scrollTo(0, lockedScrollY);
+  }
 }
 document.querySelectorAll('.overlay').forEach(el => {
   new MutationObserver(syncModalScrollLock).observe(el, { attributes:true, attributeFilter:['class'] });
