@@ -199,9 +199,8 @@
   }
   .utility-row button:active{ transform:scale(0.97); }
   .utility-row button.primary{
-    background:var(--primary);
-    color:#fff;
-    box-shadow:0 6px 16px rgba(59,91,255,0.28);
+    background:var(--primary-soft);
+    color:var(--primary-deep);
   }
   .utility-row button:focus-visible{
     outline:2px solid var(--primary);
@@ -2336,6 +2335,17 @@ document.querySelectorAll('.overlay').forEach(el => {
   new MutationObserver(syncModalScrollLock).observe(el, { attributes:true, attributeFilter:['class'] });
 });
 syncModalScrollLock();
+
+function resetZoom(){
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if(!viewport) return;
+  const original = viewport.getAttribute('content');
+  viewport.setAttribute('content', original + ', maximum-scale=1.0');
+  setTimeout(() => { viewport.setAttribute('content', original); }, 350);
+}
+window.addEventListener('load', resetZoom);
+window.addEventListener('pageshow', resetZoom);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resetZoom(); });
 
 attachTabSwipe();
 render();
