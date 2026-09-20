@@ -557,6 +557,24 @@
     text-underline-offset:3px;
     cursor:pointer;
   }
+  .admin-bar-backup{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-top:2px;
+  }
+  .admin-bar-backup button, .backup-restore-label{
+    background:none;
+    border:none;
+    padding:0;
+    font-family:inherit;
+    font-size:0.76rem;
+    font-weight:700;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
+  }
   .admin-bar button{
     font-family:inherit;
     cursor:pointer;
@@ -915,6 +933,11 @@
       <span id="adminCurrentBaseDate" class="admin-current-base" role="button" tabindex="0"></span>
       <button id="adminDateChip">기준일 관리</button>
       <button id="promoteBaseDate" style="display:none;">이 날짜를 기준일로 지정</button>
+    </div>
+    <div class="admin-bar-backup">
+      <button id="backupNowBtn">지금 백업</button>
+      <label for="restoreFileInput" class="backup-restore-label">백업 불러오기</label>
+      <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
     </div>
   </div>
 
@@ -1342,6 +1365,8 @@ const adminBar = document.getElementById('adminBar');
 const adminDateChip = document.getElementById('adminDateChip');
 const adminCurrentBaseDate = document.getElementById('adminCurrentBaseDate');
 const promoteBaseDate = document.getElementById('promoteBaseDate');
+const backupNowBtn = document.getElementById('backupNowBtn');
+const restoreFileInput = document.getElementById('restoreFileInput');
 const adminExit = document.getElementById('adminExit');
 const confirmOverlay = document.getElementById('confirmOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
@@ -2285,6 +2310,83 @@ function closeAdminLogin(){
   adminOverlay.classList.remove('open');
 }
 
+const AUTO_BACKUP_DATE_KEY = 'busan-ulsan-mma-lastbackup-v1';
+
+function buildBackupPayload(){
+  return {
+    exportedAt: new Date().toISOString(),
+    baseDate: baseDate,
+    contacts: contacts,
+    archive: loadArchive()
+  };
+}
+
+function downloadBackupFile(){
+  try{
+    const payload = buildBackupPayload();
+    const today = new Date();
+    const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `병무청전화번호부_백업_${y}${m}${d}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function autoBackupIfNeeded(){
+  try{
+    const today = new Date();
+    const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+    const todayKey = `${y}-${m}-${d}`;
+    const lastBackup = localStorage.getItem(AUTO_BACKUP_DATE_KEY);
+    if(lastBackup === todayKey) return;
+    if(downloadBackupFile()){
+      localStorage.setItem(AUTO_BACKUP_DATE_KEY, todayKey);
+      showToast('오늘의 자동 백업 파일을 저장했습니다');
+    }
+  }catch(e){
+    // 자동 백업 실패는 조용히 무시
+  }
+}
+
+function restoreFromBackupFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data || !Array.isArray(data.contacts)){
+        showToast('올바른 백업 파일이 아닙니다');
+        return;
+      }
+      showConfirm('백업 파일로 복원하시겠습니까? 현재 데이터를 덮어씁니다.', () => {
+        contacts = data.contacts;
+        saveContacts(contacts);
+        if(data.archive && typeof data.archive === 'object'){
+          try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(data.archive)); }catch(e){}
+        }
+        if(data.baseDate){
+          baseDate = data.baseDate;
+          saveBaseDate(baseDate);
+        }
+        adminWorkingDate = baseDate;
+        showToast('백업 파일로 복원했습니다');
+        render();
+      });
+    }catch(e){
+      showToast('백업 파일을 읽는 중 오류가 발생했습니다');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function tryAdminLogin(){
   if(adminPassword.value === '1114!'){
     adminMode = true;
@@ -2293,6 +2395,7 @@ function tryAdminLogin(){
     closeAdminLogin();
     showToast('관리자 모드입니다');
     render();
+    autoBackupIfNeeded();
   }else{
     showToast('비밀번호가 올바르지 않습니다');
     adminPassword.value = '';
@@ -2301,6 +2404,20 @@ function tryAdminLogin(){
 }
 
 adminToggle.addEventListener('click', openAdminLogin);
+
+backupNowBtn.addEventListener('click', () => {
+  if(downloadBackupFile()){
+    showToast('백업 파일을 저장했습니다');
+  }else{
+    showToast('백업 파일 생성에 실패했습니다');
+  }
+});
+
+restoreFileInput.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if(file) restoreFromBackupFile(file);
+  restoreFileInput.value = '';
+});
 adminExit.addEventListener('click', () => {
   adminMode = false;
   adminWorkingDate = null;
