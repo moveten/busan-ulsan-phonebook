@@ -964,6 +964,7 @@
 
   <div class="utility-row">
     <button id="browseToggle">과별로 보기</button>
+    <button id="favToggle" style="display:none;">★ 즐겨찾기</button>
     <button id="archiveToggle" style="display:none;">아카이브</button>
     <button id="openAdd" class="primary" style="display:none;">+ 연락처 추가</button>
   </div>
@@ -1405,6 +1406,7 @@ const listArea = document.getElementById('listArea');
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
 const browseToggle = document.getElementById('browseToggle');
+const favToggle = document.getElementById('favToggle');
 const browseExitFixed = document.getElementById('browseExitFixed');
 const openAddBtn = document.getElementById('openAdd');
 const adminToggle = document.getElementById('adminToggle');
@@ -1618,6 +1620,7 @@ function render(){
   renderTabs();
   browseToggle.textContent = browseMode ? '과별 보기 닫기' : '과별로 보기';
   browseToggle.style.display = browseMode ? 'none' : '';
+  favToggle.style.display = (!browseMode && favorites.size > 0) ? '' : 'none';
   browseExitFixed.style.display = browseMode ? '' : 'none';
   browseExitFixed.classList.toggle('stacked', adminMode);
   archiveToggle.style.display = 'none'; // 아카이브 기능 임시 비활성화
@@ -1656,6 +1659,8 @@ function render(){
     filtered = filtered.filter(c => changedMap[c.id] && changedMap[c.id].changeType === 'transfer');
   }else if(browseMode && activeTab === '즐겨찾기'){
     filtered = filtered.filter(c => favorites.has(c.id));
+    const deptOrder = getDepartments(sourceList);
+    filtered = filtered.slice().sort((a, b) => deptOrder.indexOf(a.dept) - deptOrder.indexOf(b.dept));
   }else if(browseMode && activeTab !== '전체'){
     filtered = filtered.filter(c => c.dept === activeTab);
   }
@@ -1971,6 +1976,12 @@ searchClear.addEventListener('click', () => {
 browseToggle.addEventListener('click', () => {
   browseMode = !browseMode;
   if(browseMode) activeTab = '전체';
+  render();
+});
+
+favToggle.addEventListener('click', () => {
+  browseMode = true;
+  activeTab = '즐겨찾기';
   render();
 });
 
