@@ -970,7 +970,7 @@
     </div>
   </div>
 
-  <div class="utility-row">
+  <div class="utility-row" id="utilityRow">
     <button id="browseToggle">과별로 보기</button>
     <button id="favToggle" style="display:none;">★ 즐겨찾기</button>
     <button id="archiveToggle" style="display:none;">아카이브</button>
@@ -1413,6 +1413,7 @@ const tabsEl = document.getElementById('tabs');
 const listArea = document.getElementById('listArea');
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
+const utilityRow = document.getElementById('utilityRow');
 const browseToggle = document.getElementById('browseToggle');
 const favToggle = document.getElementById('favToggle');
 const browseExitFixed = document.getElementById('browseExitFixed');
@@ -1626,6 +1627,8 @@ function colorFor(name){
 function render(){
   updateWrapState();
   renderTabs();
+  const searching = searchTerm.trim() !== '';
+  utilityRow.style.display = (searching && !browseMode) ? 'none' : '';
   browseToggle.textContent = browseMode ? '☰ 과별 보기 닫기' : '☰ 과별로 보기';
   browseToggle.style.display = browseMode ? 'none' : '';
   favToggle.style.display = !browseMode ? '' : 'none';
