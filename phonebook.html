@@ -1618,9 +1618,9 @@ function colorFor(name){
 function render(){
   updateWrapState();
   renderTabs();
-  browseToggle.textContent = browseMode ? '과별 보기 닫기' : '과별로 보기';
+  browseToggle.textContent = browseMode ? '🗂 과별 보기 닫기' : '🗂 과별로 보기';
   browseToggle.style.display = browseMode ? 'none' : '';
-  favToggle.style.display = (!browseMode && favorites.size > 0) ? '' : 'none';
+  favToggle.style.display = !browseMode ? '' : 'none';
   browseExitFixed.style.display = browseMode ? '' : 'none';
   browseExitFixed.classList.toggle('stacked', adminMode);
   archiveToggle.style.display = 'none'; // 아카이브 기능 임시 비활성화
