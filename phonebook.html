@@ -1631,7 +1631,7 @@ function render(){
   utilityRow.style.display = (searching && !browseMode) ? 'none' : '';
   browseToggle.textContent = browseMode ? '☰ 과별 보기 닫기' : '☰ 과별로 보기';
   browseToggle.style.display = browseMode ? 'none' : '';
-  favToggle.style.display = !browseMode ? '' : 'none';
+  favToggle.style.display = (!browseMode && !adminMode) ? '' : 'none';
   browseExitFixed.style.display = browseMode ? '' : 'none';
   browseExitFixed.textContent = activeTab === '즐겨찾기' ? '즐겨찾기 닫기' : '과별 보기 닫기';
   browseExitFixed.classList.toggle('stacked', adminMode);
@@ -1723,7 +1723,7 @@ function renderCards(list, changedMap){
     const nameTag = adminMode ? 'button' : 'span';
     const nameAttrs = adminMode ? 'type="button" class="name name-editable"' : 'class="name"';
     const isFav = favorites.has(c.id);
-    const favBtn = `<button type="button" class="fav-btn${isFav ? ' active' : ''}" data-id="${escapeAttr(c.id)}" aria-label="즐겨찾기">${isFav ? '★' : '☆'}</button>`;
+    const favBtn = adminMode ? '' : `<button type="button" class="fav-btn${isFav ? ' active' : ''}" data-id="${escapeAttr(c.id)}" aria-label="즐겨찾기">${isFav ? '★' : '☆'}</button>`;
     const cardBody = `
       ${favBtn}
       <div class="left">
@@ -1749,7 +1749,7 @@ function renderCards(list, changedMap){
         nameBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           if(card.classList.contains('revealed')) return; // 열려있을 때는 닫기만
-          showConfirm(`${c.name}님의 연락처를 수정하시겠습니까?`, () => openEdit(c.id));
+          openEdit(c.id);
         });
       }
       const deleteBtn = card.querySelector('.card-delete-btn');
