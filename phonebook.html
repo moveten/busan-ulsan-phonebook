@@ -2070,8 +2070,7 @@ function openDatePicker(mode){
     byYear[selectedYear].forEach(d => {
       const btn = document.createElement('button');
       btn.className = 'archive-item' + (d === selectedDate ? ' today' : '');
-      const count = (arc[d]||[]).length;
-      btn.innerHTML = `${escapeHtml(formatDateLabel(d))}<span class="archive-item-sub">${count}건 저장됨</span>`;
+      btn.textContent = formatDateLabel(d);
       if(mode === 'admin'){
         btn.onclick = () => {
           selectedDate = d;
