@@ -1630,6 +1630,7 @@ function render(){
   browseToggle.style.display = browseMode ? 'none' : '';
   favToggle.style.display = !browseMode ? '' : 'none';
   browseExitFixed.style.display = browseMode ? '' : 'none';
+  browseExitFixed.textContent = activeTab === '즐겨찾기' ? '즐겨찾기 닫기' : '과별 보기 닫기';
   browseExitFixed.classList.toggle('stacked', adminMode);
   archiveToggle.style.display = 'none'; // 아카이브 기능 임시 비활성화
   openAddBtn.style.display = adminMode ? '' : 'none';
