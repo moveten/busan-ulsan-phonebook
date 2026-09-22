@@ -280,6 +280,15 @@
     border-color:var(--coral);
     color:#fff;
   }
+  .tab-fav{
+    color:#FFC542;
+    border-color:#FFC542;
+  }
+  .tab-fav.active{
+    background:#FFC542;
+    border-color:#FFC542;
+    color:#3A2E00;
+  }
   .tab:focus-visible{
     outline:2px solid var(--primary);
     outline-offset:2px;
@@ -326,6 +335,17 @@
     cursor:pointer;
     z-index:0;
   }
+  .fav-btn{
+    flex-shrink:0;
+    background:none;
+    border:none;
+    padding:2px;
+    font-size:22px;
+    line-height:1;
+    color:var(--line);
+    cursor:pointer;
+  }
+  .fav-btn.active{ color:#FFC542; }
   .card .left{
     flex:1;
     min-width:0;
@@ -1059,6 +1079,7 @@ const GOOGLE_CLIENT_ID = ''; // 구글 클라우드에서 발급받은 OAuth 클
 const BASE_DATE_KEY = 'busan-ulsan-mma-basedate-v1';
 const DEFAULT_BASE_DATE = '2026-09-07';
 const AVATAR_COLORS = ['#3B5BFF', '#00C2A8', '#FF8B6B', '#8A5CF6', '#2AB673'];
+const FAVORITES_KEY = 'busan-ulsan-mma-favorites-v1';
 const NEW_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000; // 3일 이내 변경분을 "새로 변경됨"으로 표시
 
 const seedData = [
@@ -1217,6 +1238,33 @@ const seedData = [
   { id:'p251', name:'정유하', dept:'병역판정검사의사', duty:'치과', phone:'051-667-5477', note:'' },
   { id:'p252', name:'현재환', dept:'병역판정검사의사', duty:'영상의학과', phone:'051-667-5479', note:'' },
 ];
+
+function loadFavorites(){
+  try{
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? new Set(parsed) : new Set();
+  }catch(e){
+    return new Set();
+  }
+}
+
+function saveFavorites(set){
+  try{
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(set)));
+  }catch(e){
+    // 저장 실패는 조용히 무시
+  }
+}
+
+let favorites = loadFavorites();
+
+function toggleFavorite(id){
+  if(favorites.has(id)) favorites.delete(id);
+  else favorites.add(id);
+  saveFavorites(favorites);
+  render();
+}
 
 function loadContacts(){
   try{
@@ -1501,12 +1549,20 @@ function renderTabs(){
   tabsEl.style.display = 'flex';
   const depts = getDepartments(effectiveContacts());
   const transferCount = getChangedPeople().filter(c => c.changeType === 'transfer').length;
+  const favCount = effectiveContacts().filter(c => favorites.has(c.id)).length;
   tabsEl.innerHTML = '';
   const allBtn = document.createElement('button');
   allBtn.className = 'tab' + (activeTab === '전체' ? ' active' : '');
   allBtn.textContent = '전체';
   allBtn.onclick = () => { activeTab = '전체'; render(); };
   tabsEl.appendChild(allBtn);
+  if(favCount > 0){
+    const favTabBtn = document.createElement('button');
+    favTabBtn.className = 'tab tab-fav' + (activeTab === '즐겨찾기' ? ' active' : '');
+    favTabBtn.textContent = `★ 즐겨찾기 ${favCount}`;
+    favTabBtn.onclick = () => { activeTab = '즐겨찾기'; render(); };
+    tabsEl.appendChild(favTabBtn);
+  }
   if(transferCount > 0){
     const moveBtn = document.createElement('button');
     moveBtn.className = 'tab tab-transfer' + (activeTab === '인사이동자' ? ' active' : '');
@@ -1598,6 +1654,8 @@ function render(){
 
   if(browseMode && activeTab === '인사이동자'){
     filtered = filtered.filter(c => changedMap[c.id] && changedMap[c.id].changeType === 'transfer');
+  }else if(browseMode && activeTab === '즐겨찾기'){
+    filtered = filtered.filter(c => favorites.has(c.id));
   }else if(browseMode && activeTab !== '전체'){
     filtered = filtered.filter(c => c.dept === activeTab);
   }
@@ -1647,7 +1705,10 @@ function renderCards(list, changedMap){
       : `<a class="phone-link" href="tel:${escapeAttr((c.phone||'').replace(/[^0-9+]/g,''))}">${escapeHtml(phoneShort)}</a>`;
     const nameTag = adminMode ? 'button' : 'span';
     const nameAttrs = adminMode ? 'type="button" class="name name-editable"' : 'class="name"';
+    const isFav = favorites.has(c.id);
+    const favBtn = `<button type="button" class="fav-btn${isFav ? ' active' : ''}" data-id="${escapeAttr(c.id)}" aria-label="즐겨찾기">${isFav ? '★' : '☆'}</button>`;
     const cardBody = `
+      ${favBtn}
       <div class="left">
         <div class="name-row">
           <${nameTag} ${nameAttrs}>${highlightMatch(c.name, searchTerm.trim())}</${nameTag}>
@@ -1692,6 +1753,13 @@ function renderCards(list, changedMap){
           openChangeInfo(change);
         });
       }
+    }
+    const favEl = card.querySelector('.fav-btn');
+    if(favEl){
+      favEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFavorite(c.id);
+      });
     }
     frag.appendChild(card);
   });
@@ -1780,7 +1848,11 @@ function attachTabSwipe(){
     const dy = e.clientY - startY;
     if(Math.abs(dy) > 60 || Math.abs(dx) < THRESHOLD) return;
     const depts = getDepartments(effectiveContacts());
-    const specialTabs = getChangedPeople().length ? ['인사이동자'] : [];
+    const favCount = effectiveContacts().filter(c => favorites.has(c.id)).length;
+    const specialTabs = [
+      ...(favCount ? ['즐겨찾기'] : []),
+      ...(getChangedPeople().length ? ['인사이동자'] : [])
+    ];
     const allTabs = [...specialTabs, ...depts];
     const idx = allTabs.indexOf(activeTab);
     if(idx === -1) return;
