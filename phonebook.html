@@ -2183,7 +2183,12 @@ function buildAddDateSection(){
     fileBtn.disabled = true;
     fileBtn.textContent = isPdf ? 'PDF 읽는 중...' : '이미지 인식 중... (시간이 걸릴 수 있어요)';
     try{
-      const lines = isPdf ? await extractPdfLines(file) : await extractImageLines(file);
+      let lines = isPdf ? await extractPdfLines(file) : await extractImageLines(file);
+      if(isPdf && lines.length === 0){
+        // 텍스트가 없는(스캔 이미지) PDF로 보임 → 이미지 인식(OCR)으로 재시도
+        fileBtn.textContent = '텍스트를 못 찾아 이미지로 인식 중... (시간이 걸릴 수 있어요)';
+        lines = await extractPdfLinesViaOcr(file);
+      }
       const rows = lines.map(parseLineToContact).filter(Boolean);
       if(rows.length === 0){
         showToast('전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
@@ -2278,6 +2283,27 @@ async function ensureTesseract(){
   await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js');
 }
 
+async function extractPdfLinesViaOcr(file){
+  await ensurePdfJs();
+  await ensureTesseract();
+  const buf = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  const lines = [];
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale: 2.5 }); // 글자가 작으므로 확대해서 렌더링
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const result = await window.Tesseract.recognize(canvas, 'kor+eng');
+    const text = (result && result.data && result.data.text) || '';
+    text.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => lines.push(l));
+  }
+  return lines;
+}
+
 async function extractImageLines(file){
   await ensureTesseract();
   const result = await window.Tesseract.recognize(file, 'kor+eng');
@@ -2286,11 +2312,21 @@ async function extractImageLines(file){
 }
 
 function parseLineToContact(line){
-  const phoneMatch = line.match(/(0\d{1,2}-\d{3,4}-\d{4}|\d{3,4}-\d{4})/);
-  if(!phoneMatch) return null;
-  let phone = phoneMatch[0];
-  if(!phone.startsWith('0')) phone = '051-' + phone;
-  const rest = line.replace(phoneMatch[0], '').trim();
+  let matchedText;
+  let phone;
+  const fullMatch = line.match(/(0\d{1,2}-\d{3,4}-\d{4}|\d{3,4}-\d{4})/);
+  if(fullMatch){
+    matchedText = fullMatch[0];
+    phone = matchedText;
+    if(!phone.startsWith('0')) phone = '051-' + phone;
+  }else{
+    // 하이픈 없는 4자리 내선번호만 있는 경우 (예: 5204) 앞에 지역/국번을 자동으로 붙임
+    const extMatch = line.match(/\b\d{4}\b/);
+    if(!extMatch) return null;
+    matchedText = extMatch[0];
+    phone = '051-667-' + matchedText;
+  }
+  const rest = line.replace(matchedText, '').trim();
   const tokens = rest.split(/\s+/).filter(Boolean);
   const dept = tokens[0] || '';
   const name = tokens[1] || '';
