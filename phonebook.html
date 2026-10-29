@@ -1605,7 +1605,10 @@ function escapeAttr(s){ return escapeHtml(s); }
 function matchesSearch(c, term){
   if(!term) return true;
   const t = term.toLowerCase();
-  return (c.name||'').toLowerCase().includes(t) || (c.duty||'').toLowerCase().includes(t);
+  const phoneDigits = (c.phone||'').replace(/[^0-9]/g, '');
+  const termDigits = term.replace(/[^0-9]/g, '');
+  const phoneMatches = termDigits.length > 0 && phoneDigits.includes(termDigits);
+  return (c.name||'').toLowerCase().includes(t) || (c.duty||'').toLowerCase().includes(t) || phoneMatches;
 }
 
 function highlightMatch(text, term){
@@ -2168,9 +2171,10 @@ function buildAddDateSection(){
       arc[val] = [];
       try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
     }
+    const promoted = promoteDateToBaseIfNewer(val);
     adminWorkingDate = val;
     archiveOverlay.classList.remove('open');
-    showToast(formatRefDate(val) + ' — 빈 목록에서 시작합니다. + 연락처 추가로 입력해주세요');
+    showToast(formatRefDate(val) + ' — 빈 목록에서 시작합니다.' + (promoted ? ' 새 기준일로 지정됐습니다.' : '') + ' + 연락처 추가로 입력해주세요');
     render();
   };
 
@@ -2209,6 +2213,16 @@ function buildAddDateSection(){
 archiveToggle.addEventListener('click', () => openDatePicker('view'));
 adminDateChip.addEventListener('click', () => openDatePicker('admin'));
 adminCurrentBaseDate.addEventListener('click', () => openDatePicker('admin'));
+
+function promoteDateToBaseIfNewer(dateVal){
+  if(dateVal <= baseDate) return false;
+  const arc = loadArchive();
+  baseDate = dateVal;
+  saveBaseDate(baseDate);
+  contacts = arc[baseDate] || [];
+  saveContacts(contacts);
+  return true;
+}
 
 promoteBaseDate.addEventListener('click', () => {
   if(!adminWorkingDate || adminWorkingDate === baseDate) return;
@@ -2388,9 +2402,10 @@ function openPdfReview(dateVal, rows, onCancel){
     const arc = loadArchive();
     arc[dateVal] = cleaned;
     try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
+    const promoted = promoteDateToBaseIfNewer(dateVal);
     adminWorkingDate = dateVal;
     pdfReviewOverlay.classList.remove('open');
-    showToast(formatRefDate(dateVal) + ' 데이터를 PDF에서 생성했습니다');
+    showToast(formatRefDate(dateVal) + ' 데이터를 PDF에서 생성했습니다' + (promoted ? ' (새 기준일로 지정됨)' : ''));
     render();
   });
 }

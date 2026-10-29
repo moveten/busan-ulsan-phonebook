@@ -1,4 +1,4 @@
-const CACHE_NAME = 'phonebook-v61';
+const CACHE_NAME = 'phonebook-v62';
 const urlsToCache = [
   './',
   './phonebook.html',
