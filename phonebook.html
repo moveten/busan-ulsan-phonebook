@@ -723,16 +723,47 @@
     border-radius:10px;
     margin-bottom:16px;
   }
-  .add-date-options .field{ margin-bottom:8px; }
-  .add-date-options .field input[type="date"]{
+  .add-date-options .field{ margin-bottom:18px; }
+  .add-date-options .field input.add-date-field{
     width:100%;
-    padding:10px 12px;
-    border-radius:10px;
-    border:1.5px solid var(--line);
-    background:var(--bg);
+    padding:14px 16px;
+    border-radius:12px;
+    border:none;
+    background:var(--primary-soft);
     color:var(--ink);
     font-family:inherit;
-    font-size:16px;
+    font-size:17px;
+    font-weight:700;
+  }
+  .visually-hidden{
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+  }
+  .add-date-dropzone{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    border:2px dashed var(--line);
+    border-radius:14px;
+    padding:28px 16px;
+    margin-bottom:12px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .add-date-dropzone-title{
+    font-weight:700;
+    font-size:0.95rem;
+    color:var(--ink);
+  }
+  .add-date-dropzone-file{
+    font-size:0.8rem;
+    color:var(--ink-soft);
   }
   .add-date-option{
     display:flex;
@@ -770,13 +801,6 @@
     padding:11px 16px;
   }
   .add-date-option button:disabled{ opacity:0.6; cursor:default; }
-  .add-date-divider{
-    text-align:center;
-    font-size:0.78rem;
-    font-weight:700;
-    color:var(--ink-soft);
-    margin:2px 0;
-  }
 
   .pdf-review-modal{
     max-width:600px;
@@ -2139,44 +2163,34 @@ function openDatePicker(mode){
 function buildAddDateSection(){
   const wrap = document.createElement('div');
   wrap.className = 'add-date-options';
+  const today = new Date();
+  const todayVal = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   wrap.innerHTML = `
     <div class="add-date-section-title">새 기준일 추가</div>
     <div class="field">
-      <input type="date" id="mgrDateInput">
+      <input type="date" id="mgrDateInput" class="add-date-field" value="${todayVal}">
     </div>
     <div class="add-date-option">
       <div class="add-date-option-title">파일로 추가</div>
       <div class="add-date-option-hint">PDF 파일을 넣으면 정확도가 높고, 일반 이미지 파일(사진 등)은 인식 정확도가 떨어질 수 있어요.</div>
-      <input type="file" id="mgrFileInput" accept="application/pdf,image/*">
+      <label for="mgrFileInput" class="add-date-dropzone">
+        <span class="add-date-dropzone-title">탭해서 PDF/이미지 선택</span>
+        <span class="add-date-dropzone-file" id="mgrFileName">선택한 파일 없음</span>
+      </label>
+      <input type="file" id="mgrFileInput" accept="application/pdf,image/*" class="visually-hidden">
       <button id="mgrFileBtn">파일 읽어서 검토하기</button>
-    </div>
-    <div class="add-date-divider">또는</div>
-    <div class="add-date-option">
-      <div class="add-date-option-title">직접 입력으로 추가</div>
-      <div class="add-date-option-hint">빈 목록으로 시작해서 연락처를 하나씩 직접 추가합니다.</div>
-      <button id="mgrManualBtn">직접 입력으로 시작</button>
     </div>
   `;
 
   const dateInput = wrap.querySelector('#mgrDateInput');
   const fileInput = wrap.querySelector('#mgrFileInput');
   const fileBtn = wrap.querySelector('#mgrFileBtn');
-  const manualBtn = wrap.querySelector('#mgrManualBtn');
+  const fileNameEl = wrap.querySelector('#mgrFileName');
 
-  manualBtn.onclick = () => {
-    const val = dateInput.value;
-    if(!val){ showToast('날짜를 선택해주세요'); return; }
-    const arc = loadArchive();
-    if(!arc[val]){
-      arc[val] = [];
-      try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc)); }catch(e){}
-    }
-    const promoted = promoteDateToBaseIfNewer(val);
-    adminWorkingDate = val;
-    archiveOverlay.classList.remove('open');
-    showToast(formatRefDate(val) + ' — 빈 목록에서 시작합니다.' + (promoted ? ' 새 기준일로 지정됐습니다.' : '') + ' + 연락처 추가로 입력해주세요');
-    render();
-  };
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0];
+    fileNameEl.textContent = f ? f.name : '선택한 파일 없음';
+  });
 
   fileBtn.onclick = async () => {
     const val = dateInput.value;
