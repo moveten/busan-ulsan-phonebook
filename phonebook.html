@@ -2075,16 +2075,32 @@ function openDatePicker(mode){
   }
 
   function doDelete(){
-    if(selectedDate === baseDate){
-      showToast('현재 기준일은 삭제할 수 없습니다. 다른 날짜를 기준일로 지정한 뒤 삭제해주세요.');
-      return;
-    }
-    showConfirm('삭제하시겠습니까?', () => {
+    const isCurrentBase = selectedDate === baseDate;
+    const msg = isCurrentBase
+      ? `${formatDateLabel(selectedDate)}은(는) 현재 기준일입니다. 삭제하면 그다음으로 최신인 날짜가 자동으로 새 기준일이 됩니다. 정말 삭제하시겠습니까?`
+      : '삭제하시겠습니까?';
+    showConfirm(msg, () => {
       const arc2 = loadArchive();
       delete arc2[selectedDate];
       try{ localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arc2)); }catch(e){}
       if(adminWorkingDate === selectedDate) adminWorkingDate = baseDate;
-      showToast(formatDateLabel(selectedDate) + ' 기록을 삭제했습니다');
+
+      if(isCurrentBase){
+        const remaining = Object.keys(arc2).sort((a, b) => b.localeCompare(a));
+        if(remaining.length > 0){
+          baseDate = remaining[0];
+          saveBaseDate(baseDate);
+          contacts = arc2[baseDate] || [];
+          saveContacts(contacts);
+        }else{
+          // 남은 기록이 없으면 빈 목록으로 현재 기준일 유지
+          contacts = [];
+          saveContacts(contacts);
+        }
+        adminWorkingDate = baseDate;
+      }
+
+      showToast(formatDateLabel(selectedDate) + ' 기록을 삭제했습니다' + (isCurrentBase ? ` (새 기준일: ${formatRefDate(baseDate)})` : ''));
       archiveOverlay.classList.remove('open');
       render();
     });
