@@ -2217,13 +2217,23 @@ function buildAddDateSection(){
     fileBtn.disabled = true;
     fileBtn.textContent = isPdf ? 'PDF 읽는 중...' : '이미지 인식 중... (시간이 걸릴 수 있어요)';
     try{
-      let lines = isPdf ? await extractPdfLines(file) : await extractImageLines(file);
-      if(isPdf && lines.length === 0){
-        // 텍스트가 없는(스캔 이미지) PDF로 보임 → 이미지 인식(OCR)으로 재시도
-        fileBtn.textContent = '텍스트를 못 찾아 이미지로 인식 중... (시간이 걸릴 수 있어요)';
-        lines = await extractPdfLinesViaOcr(file);
+      let rows = [];
+      if(isPdf){
+        // 1순위: 부서 칸(박스) 기준으로 이름/업무/번호를 정확하게 추출
+        rows = await extractPdfContacts(file);
+        if(rows.length === 0){
+          // 2순위: 줄 단위 추출, 그래도 없으면 이미지 인식(OCR)
+          let lines = await extractPdfLines(file);
+          if(lines.length === 0){
+            fileBtn.textContent = '텍스트를 못 찾아 이미지로 인식 중... (시간이 걸릴 수 있어요)';
+            lines = await extractPdfLinesViaOcr(file);
+          }
+          rows = lines.flatMap(parseLineToContacts);
+        }
+      }else{
+        const lines = await extractImageLines(file);
+        rows = lines.flatMap(parseLineToContacts);
       }
-      const rows = lines.flatMap(parseLineToContacts);
       if(rows.length === 0){
         showToast('전화번호 형식을 찾지 못했습니다. 직접 입력해주세요.');
       }else{
@@ -2358,6 +2368,158 @@ async function extractImageLines(file){
   const result = await window.Tesseract.recognize(file, 'kor+eng');
   const text = (result && result.data && result.data.text) || '';
   return text.split('\n').map(l => l.trim()).filter(Boolean);
+}
+
+const PDF_SURNAMES = new Set('김이박최정강조윤장임한오서신권황안송류유전홍고문양손배백허남심노하곽성차주우구민진지엄채원천방공현함변염여추도소석선설마길연위표명기반왕금옥육인맹제모탁국어은편용예경봉사부가복태목형계두나라빈간갈감단담당돈동매묵미범상섭수승시아애야온운음점종좌창초판평포풍피해호화후흥'.split(''));
+const PDF_HEADERS = ['부속실','운영지원과','병역판정검사과','현역입영과','동원관리과','사회복무과','복무관리과','고객지원과','병역판정검사의사'];
+const PDF_IGNORE_HEADERS = ['지방청','군부대','기타사무실','유관기관','나라사랑카드발급소'];
+const PDF_NON_NAME_END = /[계과실팀센터소]$/;
+const pdfIsName = s => /^[가-힣]{2,4}$/.test(s) && PDF_SURNAMES.has(s[0]) && !PDF_NON_NAME_END.test(s);
+const PDF_NUM_RE = /^\d{4}(-\d{1,2})?,?$/;
+
+function extractContactsFromPdfItems(rawItems){
+  const items = rawItems.map(i=>({str:i.str.trim(), x0:i.x, x1:i.x+i.h, yc:i.y-i.w/2, w:i.w})).filter(i=>i.str);
+  const byRow = (a,b)=>a.yc-b.yc||a.x0-b.x0;
+
+  // 1) 헤더 후보: 같은 줄에서 가까운 조각을 이어 붙여 부서명과 일치하는지 확인
+  const sorted=[...items].sort(byRow);
+  const rowsK={}; sorted.forEach(i=>{const k=Math.round(i.yc/3);(rowsK[k]=rowsK[k]||[]).push(i);});
+  let headers=[];
+  Object.values(rowsK).forEach(r=>{
+    r.sort((a,b)=>a.x0-b.x0);
+    for(let i=0;i<r.length;i++){
+      let s='',x1=r[i].x1;
+      for(let j=i;j<r.length&&j<i+5;j++){
+        if(j>i && r[j].x0-x1>18) break;
+        s+=r[j].str.replace(/\s+/g,''); x1=Math.max(x1,r[j].x1);
+        if(PDF_HEADERS.includes(s)||PDF_IGNORE_HEADERS.includes(s)){
+          // 바로 오른쪽에 4자리 번호가 붙어있으면 "참조 라벨"이지 박스 제목이 아님
+          const hasNum = items.some(n=>PDF_NUM_RE.test(n.str) && Math.abs(n.yc-r[i].yc)<=4 && n.x0>=x1-2 && n.x0-x1<30);
+          if(!hasNum) headers.push({name:s, xc:(r[i].x0+x1)/2, yc:r[i].yc, ignore:PDF_IGNORE_HEADERS.includes(s)});
+          i=j; break;
+        }
+      }
+    }
+  });
+  // 컬럼 묶기(같은 세로줄의 머리글)
+  headers.sort((a,b)=>a.xc-b.xc);
+  const cols=[];
+  headers.forEach(h=>{
+    let c=cols.find(c=>Math.abs(c.xc-h.xc)<=38);
+    if(!c){c={xc:h.xc,hs:[]};cols.push(c);}
+    c.hs.push(h); c.xc=c.hs.reduce((s,x)=>s+x.xc,0)/c.hs.length;
+  });
+  const boxOf = p=>{
+    const xc=(p.x0+p.x1)/2;
+    let best=null,bd=1e9;
+    cols.forEach(c=>{ const d=Math.abs(c.xc-xc); if(d<bd){bd=d;best=c;} });
+    if(!best) return null;
+    let hb=null;
+    best.hs.forEach(h=>{ if(h.yc<p.yc-1 && (!hb||h.yc>hb.yc)) hb=h; });
+    return hb;
+  };
+
+  // 2) 이름 후보: 원본 조각 + (짧은 두 조각 이어 붙인 이름)
+  const nameCands=[];
+  items.forEach(i=>{ if(pdfIsName(i.str)) nameCands.push(i); });
+  sorted.forEach((a,idx)=>{
+    items.forEach(b=>{
+      if(a===b) return;
+      if(Math.abs(a.yc-b.yc)<=3 && b.x0>=a.x0+a.w*0.8 && b.x0-a.x1<7 && a.str.length<=3 && b.str.length<=2){
+        const s=a.str+b.str;
+        if(pdfIsName(s) && (!pdfIsName(a.str) || b.str.length===1)) nameCands.push({str:s,x0:a.x0,x1:b.x1,yc:(a.yc+b.yc)/2,w:a.w,parts:[a,b]});
+      }
+    });
+  });
+
+  const nums=items.filter(i=>PDF_NUM_RE.test(i.str));
+  const faxes=items.filter(i=>/^Fax$/i.test(i.str));
+  const people=[]; const usedNum=new Set();
+  nums.forEach(n=>{
+    const cands=nameCands.filter(p=>Math.abs(p.yc-n.yc)<=3.5 && p.x0<n.x0 && p.x1<=n.x0+8 && n.x0-p.x1<50);
+    if(!cands.length) return;
+    cands.sort((a,b)=>b.x1-a.x1);
+    let nm=null;
+    for(const c of cands){
+      const gap=n.x0-c.x1;
+      if(gap<14){ nm=c; break; }
+      // 간격이 넓으면, 이름과 번호 사이에 다른 글자가 전혀 없을 때만 인정
+      const between=items.some(q=>q!==c && q!==n && !(c.parts||[]).includes(q) && Math.abs(q.yc-n.yc)<=3.5 && q.x0>=c.x0+1 && q.x0<n.x0-1 && q.x1<=n.x0+2 && !(c.parts||[]).includes(q));
+      if(!between){ nm=c; break; }
+    }
+    if(!nm) return;
+    const box=boxOf(nm);
+    if(!box||box.ignore) return;
+    if(faxes.some(f=>Math.abs(f.yc-n.yc)<=4 && f.x1<=n.x0 && boxOf(f)===box)) return;
+    people.push({name:nm.str, phone:'051-667-'+n.str.replace(/[-,].*$/,''), dept:box.name, yc:nm.yc, nameP:nm, numP:n, box});
+  });
+
+  // 3) 업무: 같은 박스 안의 나머지 글자를 가장 가까운 사람 줄에 배정
+  const taken=new Set();
+  people.forEach(p=>{ taken.add(p.numP); taken.add(p.nameP); (p.nameP.parts||[]).forEach(x=>taken.add(x)); });
+  const hdrStr=new Set([...PDF_HEADERS,...PDF_IGNORE_HEADERS]);
+  const duties=new Map(people.map(p=>[p,[]]));
+  items.forEach(it=>{
+    if(taken.has(it)) return;
+    if(PDF_NUM_RE.test(it.str) || /^\d{4}/.test(it.str)) return;
+    if(hdrStr.has(it.str.replace(/\s+/g,'')) ) return;
+    const box=boxOf(it); if(!box||box.ignore) return;
+    let best=null,bd=1e9;
+    people.forEach(q=>{ if(q.box!==box) return; const d=Math.abs(q.yc-it.yc); if(d<bd){bd=d;best=q;} });
+    if(best && bd<=7.5) duties.get(best).push(it);
+  });
+  people.forEach(p=>{
+    const ds=duties.get(p).slice().sort((a,b)=>a.yc-b.yc);
+    const lines=[];
+    ds.forEach(d=>{
+      const ln=lines.find(l=>Math.abs(l.yc-d.yc)<=3);
+      if(ln) ln.items.push(d); else lines.push({yc:d.yc,items:[d]});
+    });
+    lines.sort((a,b)=>a.yc-b.yc);
+    let out='', lastX1=null;
+    lines.forEach(l=>{
+      l.items.sort((a,b)=>a.x0-b.x0).forEach(d=>{
+        if(out && lastX1!==null && d.x0-lastX1<2.5 && l.items.indexOf(d)>0) out+=d.str; else out+=(out?' ':'')+d.str;
+        lastX1=d.x1;
+      });
+      lastX1=null;
+    });
+    p.duty=out.replace(/\s+/g,' ').replace(/\s*,\s*/g,', ').replace(/,\s*$/,'').trim();
+  });
+  // 같은 이름이 범위 표기(예: 5201-3)와 그 범위 안 번호로 두 번 나오면 하나로 합침
+  const rangeOf=new Map();
+  nums.forEach(n=>{ const m=n.str.match(/^(\d{4})-(\d{1,2})/); if(m){ const base=+m[1]; const end=+(m[1].slice(0,4-m[2].length)+m[2]); rangeOf.set(n,[base,end]); } });
+  const drop=new Set();
+  people.forEach(p=>{
+    const r=rangeOf.get(p.numP); if(!r) return;
+    people.forEach(q=>{ if(q!==p && q.name===p.name){ const v=+q.phone.slice(-4); if(v>=r[0]&&v<=r[1]) drop.add(q); } });
+  });
+  const finalPeople=people.filter(p=>!drop.has(p));
+  return {people:finalPeople, headers};
+}
+
+
+async function extractPdfContacts(file){
+  await ensurePdfJs();
+  const buf = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  const rows = [];
+  for(let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    // 회전된 페이지도 보이는 모양 그대로의 좌표로 변환
+    const viewport = page.getViewport({ scale: 1 });
+    const content = await page.getTextContent();
+    const items = content.items
+      .filter(it => it.str && it.str.trim())
+      .map(it => {
+        const t = window.pdfjsLib.Util.transform(viewport.transform, it.transform);
+        return { str: it.str, x: t[4], y: t[5], w: Math.hypot(t[0], t[1]), h: it.height };
+      });
+    extractContactsFromPdfItems(items).people.forEach(q => {
+      rows.push({ id: 'r' + Math.random().toString(36).slice(2, 9), dept: q.dept, name: q.name, duty: q.duty, phone: q.phone, note: '' });
+    });
+  }
+  return rows;
 }
 
 function parseLineToContacts(line){
